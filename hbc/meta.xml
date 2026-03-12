@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app version="1">
+	<name>LoopyMSE-GX</name>
+	<coder>PSI, kasami, partlyhuman</coder>
+	<version>0.1</version>
+	<release_date>202603120000</release_date>
+	<short_description>Casio Loopy emulator (WIP)</short_description>
+	<long_description>(Emulator ported by Mr. Lechkar / CatmanFan)
+WARNING: This is a POC port to Wii, may not run as intended.
+
+Expects BIOS in "apps/LoopyMSE-Wii/bios.bin" and game in "apps/LoopyMSE-Wii/rom.bin". It will not load if either of those files are missing!
+
+** Original description follows below **
+
+A Casio Loopy emulator. WIP, plays commercial games with sound.
+
+Features:
+- Runs all commercial games including Magical Shop
+- High-level printer emulation (prints saved as BMP images)
+- Sound emulation (unfinished, see below)
+- High-level PCM expansion audio emulation
+- Keyboard and controller input support
+- Screenshots (saved as BMP images)
+</long_description>
+</app>
