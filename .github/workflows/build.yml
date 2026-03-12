@@ -23,8 +23,7 @@ jobs:
       run: make
 
     - name: Copy DOL
-      run: |
-        cp ./LoopyMSE.dol ./hbc/boot.dol
+      run: cp ./LoopyMSE.dol ./hbc/boot.dol
 
     - name: Upload artifacts
       uses: actions/upload-artifact@main
