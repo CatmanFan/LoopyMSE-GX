@@ -24,12 +24,10 @@ jobs:
 
     - name: Copy DOL
       run: |
-        cp ./LoopyMSE.dol ./release/apps/LoopyMSE/boot.dol
-        cp ./hbc/icon.png ./release/apps/LoopyMSE/icon.png
-        cp ./hbc/meta.xml ./release/apps/LoopyMSE/meta.xml
+        cp ./LoopyMSE.dol ./hbc/boot.dol
 
     - name: Upload artifacts
       uses: actions/upload-artifact@main
       with:
         name: loopymse
-        path: ./release/
+        path: ./hbc/
