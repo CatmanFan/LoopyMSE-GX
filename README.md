@@ -1,3 +1,10 @@
+## LoopyMSE-GX
+An unfinished work-in-progress/POC fork of [LoopyMSE](https://github.com/LoopyMSE/LoopyMSE) for the Wii/GameCube.
+
+Any contributions/assistance with the project to get it to working status are welcome.
+
+Original README follows below.
+
 # LoopyMSE
 A Casio Loopy emulator. WIP, plays commercial games with sound.
 

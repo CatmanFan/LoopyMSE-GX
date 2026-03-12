@@ -22,11 +22,15 @@ jobs:
     - name: Build artifacts (Wii)
       run: make
 
-    - name: Copy DOL
-      run: cp ./LoopyMSE.dol ./hbc/boot.dol
+    - name: Make HBC app
+      run:  |
+        mkdir ./wii/apps/LoopyMSE-GX
+        cp ./LoopyMSE.dol ./wii/apps/LoopyMSE-GX/boot.dol
+        cp ./hbc/icon.png ./wii/apps/LoopyMSE-GX/icon.png
+        cp ./hbc/meta.xml ./wii/apps/LoopyMSE-GX/meta.xml
 
     - name: Upload artifacts
       uses: actions/upload-artifact@main
       with:
         name: loopymse
-        path: ./hbc/
+        path: ./wii/
