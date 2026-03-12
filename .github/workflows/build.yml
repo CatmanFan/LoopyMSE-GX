@@ -24,13 +24,10 @@ jobs:
 
     - name: Make HBC app
       run:  |
-        mkdir wii/apps/LoopyMSE-GX
-        cp ./LoopyMSE.dol ./wii/apps/LoopyMSE-GX/boot.dol
-        cp ./hbc/icon.png ./wii/apps/LoopyMSE-GX/icon.png
-        cp ./hbc/meta.xml ./wii/apps/LoopyMSE-GX/meta.xml
+        cp ./LoopyMSE.dol ./hbc/apps/LoopyMSE-GX/boot.dol
 
     - name: Upload artifacts
       uses: actions/upload-artifact@main
       with:
         name: loopymse
-        path: ./wii/
+        path: ./hbc/
