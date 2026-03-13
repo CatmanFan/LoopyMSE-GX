@@ -784,7 +784,7 @@ bool LoopySound::enqueue_midi_byte(char midi_byte, int timestamp)
 {
 	if((queue_write + 1) % MIDI_QUEUE_CAPACITY == queue_read)
 	{
-		if(!midi_overflowed) //printf("[Sound] MIDI queue overflow, increase queue capacity or send smaller groups more often.\n");
+		if(!midi_overflowed) printf("[Sound] MIDI queue overflow, increase queue capacity or send smaller groups more often.\n");
 		midi_overflowed = true;
 		return false;
 	}

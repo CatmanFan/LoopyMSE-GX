@@ -36,29 +36,18 @@ namespace SDL
 	constexpr static int FRAME_WIDTH = 640;
 	constexpr static int FRAME_HEIGHT = 480;
 
-	// Scales the frame size up to 4:3 640x480
-	static constexpr float ASPECT_CORRECT_SCALE_X = (640.0f / FRAME_WIDTH);
-
 	struct Screen
 	{
 		SDL_Renderer* renderer;
 		SDL_Window* window;
 		SDL_Texture* texture;
-
-		SDL_Texture* prescaled;
-		int visible_scanlines = DISPLAY_HEIGHT;
-		int window_int_scale = 1;
-		int prescale = 1;
-		bool correct_aspect_ratio;
-		bool crop_overscan;
-		bool antialias;
 	};
 
 	static Screen screen;
 
 	bool initialize()
 	{
-		if (SDL_Init(SDL_INIT_VIDEO) < 0)
+		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) < 0)
 		{
 			printf("SDL2 error: %s\n", SDL_GetError());
 			return false;
@@ -66,13 +55,7 @@ namespace SDL
 
 		//Try synchronizing drawing to VBLANK
 		SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-
-		//Set up SDL screen parameters
-		screen.correct_aspect_ratio = true;
-		screen.crop_overscan = false;
-		screen.antialias = false;
-		screen.window_int_scale = 1;
-		screen.prescale = screen.antialias ? 4 : 1;
+		SDL_ShowCursor(SDL_DISABLE);
 
 		//Set up SDL screen
 		SDL_CreateWindowAndRenderer(2 * FRAME_WIDTH, 2 * FRAME_HEIGHT, 0, &screen.window, &screen.renderer);
@@ -82,19 +65,6 @@ namespace SDL
 		SDL_RenderSetLogicalSize(screen.renderer, 2 * FRAME_WIDTH, 2 * FRAME_HEIGHT);
 
 		screen.texture = SDL_CreateTexture(screen.renderer, SDL_PIXELFORMAT_ARGB1555, SDL_TEXTUREACCESS_STREAMING, DISPLAY_WIDTH, DISPLAY_HEIGHT);
-
-		SDL_SetTextureBlendMode(screen.texture, SDL_BLENDMODE_BLEND);
-		SDL_SetTextureScaleMode(screen.texture, SDL_ScaleModeNearest);
-
-		if (screen.prescale > 1)
-		{
-			screen.prescaled = SDL_CreateTexture(
-				screen.renderer, SDL_PIXELFORMAT_ARGB1555, SDL_TEXTUREACCESS_TARGET, DISPLAY_WIDTH * screen.prescale,
-				DISPLAY_HEIGHT * screen.prescale
-			);
-			SDL_SetTextureBlendMode(screen.prescaled, SDL_BLENDMODE_BLEND);
-			SDL_SetTextureScaleMode(screen.prescaled, SDL_ScaleModeBest);
-		}
 		return true;
 	}
 
@@ -109,56 +79,22 @@ namespace SDL
 
 	void update(uint16_t* display_output)
 	{
-		// Draw screen
+		// More efficient alternative to SDL_UpdateTexture(screen.texture, NULL, display_output, sizeof(uint16_t) * DISPLAY_WIDTH);
 		void* pixels;
 		int pitch;
-		// More efficient alternative to SDL_UpdateTexture(screen.texture, NULL, display_output, sizeof(uint16_t) * DISPLAY_WIDTH);
 		if (SDL_LockTexture(screen.texture, nullptr, &pixels, &pitch) == 0)
 		{
 			memcpy(pixels, display_output, sizeof(uint16_t) * DISPLAY_WIDTH * DISPLAY_HEIGHT);
 			SDL_UnlockTexture(screen.texture);
 		}
-		// SDL_RenderCopy(screen.renderer, screen.texture, NULL, NULL);
-		// SDL_RenderPresent(screen.renderer);
 
-		// Prescale
-		if (screen.prescaled)
-		{
-			SDL_SetRenderTarget(screen.renderer, screen.prescaled);
-			SDL_RenderClear(screen.renderer);
-			SDL_RenderCopy(screen.renderer, screen.texture, nullptr, nullptr);
-		}
-
-		// Change target back to screen (must be done before querying renderer output size!)
-		SDL_SetRenderTarget(screen.renderer, nullptr);
+		// Clear screen
+		SDL_SetRenderDrawColor(screen.renderer, 0, 0, 255, 255);
 		SDL_RenderClear(screen.renderer);
 
-		SDL_Rect src = {0, 0, DISPLAY_WIDTH * screen.prescale, DISPLAY_HEIGHT * screen.prescale};
-		SDL_Rect frame = {0, 0, FRAME_WIDTH * screen.prescale, FRAME_HEIGHT * screen.prescale};
-		if (screen.crop_overscan) frame = src;
-		SDL_Rect dest = {0};
-		SDL_GetRendererOutputSize(screen.renderer, &dest.w, &dest.h);
-
-		float scale_x = (float)dest.w / frame.w;
-		float scale_y = (float)dest.h / frame.h;
-		float scale = SDL_min(scale_x, scale_y);
-		if (!screen.antialias && !screen.correct_aspect_ratio)
-		{
-			scale = SDL_floorf(scale);
-		}
-		scale_x = scale_y = scale;
-		if (screen.correct_aspect_ratio)
-		{
-			scale_x *= ASPECT_CORRECT_SCALE_X;
-		}
-		float w = scale_x * src.w;
-		float h = scale_y * src.h;
-		dest.x = (dest.w - w) / 2;
-		dest.y = (dest.h - h) / 2;
-		dest.w = w;
-		dest.h = h;
-
-		SDL_RenderCopy(screen.renderer, (screen.prescaled ? screen.prescaled : screen.texture), &src, &dest);
+		// Draw screen
+		// SDL_UpdateTexture(screen.texture, NULL, display_output, sizeof(uint16_t) * DISPLAY_WIDTH);
+		SDL_RenderCopy(screen.renderer, screen.texture, NULL, NULL);
 		SDL_RenderPresent(screen.renderer);
 	}
 }
@@ -239,8 +175,12 @@ int main(int argc, char **argv) {
 	// Enable all buttons and accelerometer for all connected controllers
 	WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
 
+	SYS_SetPowerCallback(cbShutdown);
+	WPAD_SetPowerButtonCallback(cbShutdownWpad);
+	SYS_SetResetCallback(cbReset);
+
 	// Initialise the console
-	/*GXRModeObj *rmode = VIDEO_GetPreferredMode(NULL);
+	GXRModeObj *rmode = VIDEO_GetPreferredMode(NULL);
 	void *xfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(rmode));
 	console_init(xfb,20,20,rmode->fbWidth,rmode->xfbHeight,rmode->fbWidth*VI_DISPLAY_PIX_SZ);
 	VIDEO_Configure(rmode);
@@ -250,18 +190,9 @@ int main(int argc, char **argv) {
 
 	// Wait for Video setup to complete
 	VIDEO_WaitVSync();
-	if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();*/
+	if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
 
-	SYS_SetPowerCallback(cbShutdown);
-	WPAD_SetPowerButtonCallback(cbShutdownWpad);
-	SYS_SetResetCallback(cbReset);
-
-	// The console understands VT terminal escape codes
-	// This positions the cursor on row 2, column 0
-	// we can use variables for this with format codes too
-	// e.g. printf ("\x1b[%d;%dH", row, column );
 	printf("\x1b[2;0H");
-
 	printf("LoopyMSE-Wii v0.1\n\n");
 
 	if (!initFat()) {
@@ -334,6 +265,7 @@ int main(int argc, char **argv) {
 	//Initialize the emulator and all of its subprojects
 	printf("Starting virtual machine\n");
 	System::initialize(config);
+	Sound::set_mute(false);
 
 	//All subprojects have been initialized, so it is safe to reference them now
 	Input::add_key_binding(SDLK_RETURN, Input::PAD_START);
@@ -368,7 +300,7 @@ int main(int argc, char **argv) {
 		System::run();
 		SDL::update(System::get_display_output());
 
-		/*SDL_Event e;
+		SDL_Event e;
 		while (SDL_PollEvent(&e))
 		{
 			switch (e.type)
@@ -383,13 +315,13 @@ int main(int argc, char **argv) {
 				Input::set_key_state(e.key.keysym.sym, false);
 				break;
 			}
-		}*/
+		}
 
 	}
 
-	// System::shutdown();
+	System::shutdown();
 	VIDEO_SetBlack(true);
-	// SDL::shutdown();
+	SDL::shutdown();
 
 	// fatUnmount(0);
 
