@@ -1,22 +1,16 @@
-// #include "sdl/imgwriter.h"
-#include "common/bswp.h"
-#include "common/wordops.h"
-#include "core/loopy_io.h"
-#include "core/memory.h"
-#include "core/sh2/peripherals/sh2_intc.h"
-#include "core/timing.h"
-// #include "log/log.h"
-
+#include <limits>
 #include <cassert>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
-#include <limits>
-
+#include "common/wordops.h"
+#include "common/bswp.h"
+#include "core/sh2/peripherals/sh2_intc.h"
+#include "core/memory.h"
+#include "core/timing.h"
 #include "video/render.h"
 #include "video/vdp_local.h"
-
-// namespace imagew = SDL::ImageWriter;
+#include "video/video.h"
 
 namespace Video
 {
@@ -35,49 +29,76 @@ struct DumpHeader
 	uint32_t data_width;
 };
 
-void dump_all_bmps(int image_type, fs::path base_path)
+static void dump_bmp(std::string name, std::unique_ptr<uint16_t[]>& data)
 {
-	/*fs::path image_ext = imagew::image_extension(image_type);
+	std::ofstream bmp_file(name + ".bmp", std::ios::binary);
 
+	const char* SIGNATURE = "BM";
+	bmp_file.write(SIGNATURE, 2);
+
+	constexpr static int DATA_SIZE = (DISPLAY_WIDTH * DISPLAY_HEIGHT * 2);
+	uint32_t file_size = DATA_SIZE + 0x36;
+	bmp_file.write((char*)&file_size, 4);
+
+	uint32_t reserved = 0;
+	bmp_file.write((char*)&reserved, 4);
+
+	uint32_t data_offs = 0x36;
+	bmp_file.write((char*)&data_offs, 4);
+
+	uint32_t info_size = 0x28;
+	bmp_file.write((char*)&info_size, 4);
+
+	bmp_file.write((char*)&DISPLAY_WIDTH, 4);
+	bmp_file.write((char*)&DISPLAY_HEIGHT, 4);
+
+	uint16_t planes = 1;
+	bmp_file.write((char*)&planes, 2);
+
+	uint16_t bpp = 16;
+	bmp_file.write((char*)&bpp, 2);
+
+	uint32_t compression = 0;
+	bmp_file.write((char*)&compression, 4);
+	bmp_file.write((char*)&compression, 4);
+	bmp_file.write((char*)&compression, 4);
+	bmp_file.write((char*)&compression, 4);
+	bmp_file.write((char*)&compression, 4);
+	bmp_file.write((char*)&compression, 4);
+
+	for (int y = 0; y < DISPLAY_HEIGHT; y++)
+	{
+		int flipped_y = DISPLAY_HEIGHT - y - 1;
+		bmp_file.write((char*)(data.get() + flipped_y * DISPLAY_WIDTH), DISPLAY_WIDTH * 2);
+	}
+}
+
+static void dump_all_bmps()
+{
 	for (int i = 0; i < 4; i++)
 	{
-		fs::path bitmap_name = "output_bitmap";
-		bitmap_name += std::to_string(i);
-		bitmap_name += image_ext;
-		imagew::save_image_16bpp(
-			image_type, base_path / bitmap_name, DISPLAY_WIDTH, DISPLAY_HEIGHT, vdp.bitmap_output[i].get(), true
-		);
+		char num = '0' + i;
+
+		std::string bitmap_name = "output_bitmap";
+		dump_bmp(bitmap_name + num, vdp.bitmap_output[i]);
 	}
 
 	for (int i = 0; i < 2; i++)
 	{
-		fs::path bg_name = "output_bg";
-		bg_name += std::to_string(i);
-		bg_name += image_ext;
-		imagew::save_image_16bpp(
-			image_type, base_path / bg_name, DISPLAY_WIDTH, DISPLAY_HEIGHT, vdp.bg_output[i].get(), true
-		);
+		char num = '0' + i;
 
-		fs::path screen_name = "output_screen_";
+		std::string bg_name = "output_bg";
+		dump_bmp(bg_name + num, vdp.bg_output[i]);
+
+		std::string screen_name = "output_screen_";
 		screen_name += (i == 1) ? 'B' : 'A';
-		screen_name += image_ext;
-		imagew::save_image_16bpp(
-			image_type, base_path / screen_name, DISPLAY_WIDTH, DISPLAY_HEIGHT, vdp.screen_output[i].get(), true
-		);
+		dump_bmp(screen_name, vdp.screen_output[i]);
 
-		fs::path obj_name = "output_obj";
-		obj_name += std::to_string(i);
-		obj_name += image_ext;
-		imagew::save_image_16bpp(
-			image_type, base_path / obj_name, DISPLAY_WIDTH, DISPLAY_HEIGHT, vdp.obj_output[i].get(), true
-		);
+		std::string obj_name = "output_obj";
+		dump_bmp(obj_name + num, vdp.obj_output[i]);
 	}
 
-	fs::path display_name = "output_display";
-	display_name += image_ext;
-	imagew::save_image_16bpp(
-		image_type, base_path / display_name, DISPLAY_WIDTH, DISPLAY_HEIGHT, vdp.display_output.get(), false
-	);*/
+	dump_bmp("output_display", vdp.display_output);
 }
 
 static void start_hsync(uint64_t param, int cycles_late)
@@ -87,7 +108,7 @@ static void start_hsync(uint64_t param, int cycles_late)
 	//For now hcmp is not emulated but we just assume it happens at the same time as HSYNC
 	if (vdp.cmp_irq_ctrl.irq0_enable && vdp.cmp_irq_ctrl.irq0_enable2)
 	{
-		if (!vdp.cmp_irq_ctrl.use_vcmp || vdp.vcount == vdp.irq0_vcmp)
+		if(!vdp.cmp_irq_ctrl.use_vcmp || vdp.vcount == vdp.irq0_vcmp)
 		{
 			auto irq_id = SH2::OCPM::INTC::IRQ::IRQ0;
 			SH2::OCPM::INTC::assert_irq(irq_id, 0);
@@ -97,7 +118,7 @@ static void start_hsync(uint64_t param, int cycles_late)
 	//IRQ1 is triggered on visible lines when in HSYNC mode
 	if (vdp.sync_irq_ctrl.irq1_enable && vdp.sync_irq_ctrl.irq1_source == 1)
 	{
-		if (vdp.vcount < vdp.visible_scanlines)
+		if(vdp.vcount < vdp.visible_scanlines)
 		{
 			auto irq_id = SH2::OCPM::INTC::IRQ::IRQ1;
 			SH2::OCPM::INTC::assert_irq(irq_id, 0);
@@ -108,7 +129,7 @@ static void start_hsync(uint64_t param, int cycles_late)
 
 static void vsync_start()
 {
-	// Log::debug("[Video] VSYNC start");
+	//printf("[Video] VSYNC start\n");
 
 	//This is kinda weird, but when the VDP enters VSYNC, the total number of scanlines is subtracted from VCOUNT
 	//Think of the VSYNC lines as being negative
@@ -147,7 +168,7 @@ static void inc_vcount(uint64_t param, int cycles_late)
 	}
 
 	vdp.vcount++;
-
+	
 	//Once we go past the visible region, enter VSYNC
 	if (vdp.vcount == vdp.visible_scanlines)
 	{
@@ -156,20 +177,10 @@ static void inc_vcount(uint64_t param, int cycles_late)
 
 	//At the end of VSYNC, wrap around to the start of the visible region
 	constexpr static int VSYNC_END = 0x200;
-
 	if (vdp.vcount == VSYNC_END)
 	{
-		// Log::debug("[Video] VSYNC end");
+		//printf("[Video] VSYNC end\n");
 		vdp.vcount = 0;
-
-		//Draw the background color outside the active area
-		if (!vdp.mode.extra_scanlines)
-		{
-			//SDL will be sampling only the active area rect, but during blending, AA will sample from the very next row,
-			//so fill it with the background instead of 0x0.
-			//The top, left, and right are not subject to this because the source rect touches the edges of the texture so it's not sampled beyond that
-			Renderer::draw_border_scanline(0xE0);
-		}
 	}
 
 	constexpr static int CYCLES_PER_FRAME = Timing::F_CPU / 60;
@@ -186,7 +197,7 @@ static void inc_vcount(uint64_t param, int cycles_late)
 static void dump_serial_region(std::ofstream& dump, uint8_t* mem, uint32_t addr, uint32_t length)
 {
 	DumpHeader header;
-	header.addr = Common::bswp32(addr | (1 << 27));	 //Make sure the address is 16-bit for the CPU
+	header.addr = Common::bswp32(addr | (1 << 27)); //Make sure the address is 16-bit for the CPU
 	header.length = Common::bswp32(length);
 	header.data_width = Common::bswp32(2);
 
@@ -196,7 +207,7 @@ static void dump_serial_region(std::ofstream& dump, uint8_t* mem, uint32_t addr,
 
 void initialize()
 {
-	// vdp = {}; THIS CAUSES AN EXCEPTION
+	// vdp = {};
 
 	vdp.visible_scanlines = 0xE0;
 
@@ -263,26 +274,9 @@ bool check_frame_end()
 	return vdp.frame_ended;
 }
 
-uint16_t get_background_color()
-{
-	return vdp.backdrops[0];
-}
-
-int get_display_scanlines()
-{
-	return vdp.visible_scanlines;
-}
-
 uint16_t* get_display_output()
 {
 	return vdp.display_output.get();
-}
-
-void dump_current_frame(int image_type, fs::path bmp_path)
-{
-	// Do we need to wait for vsync? This happens on input processing loop
-	// bool status =
-		// imagew::save_image_16bpp(image_type, bmp_path, DISPLAY_WIDTH, vdp.visible_scanlines, vdp.display_output.get());
 }
 
 void dump_for_serial()
@@ -440,7 +434,7 @@ uint16_t bitmap_reg_read16(uint32_t addr)
 	case 0x050:
 		return layer->buffer_ctrl;
 	default:
-		assert(0);
+		// assert(0);
 		return 0;
 	}
 }
@@ -466,44 +460,44 @@ void bitmap_reg_write16(uint32_t addr, uint16_t value)
 	switch (reg)
 	{
 	case 0x000:
-		// Log::debug("[Video] write BM%d_SCROLLX: %04X", index, value);
+		//printf("[Video] write BM%d_SCROLLX: %04X\n", index, value);
 		layer->scrollx = value & 0x1FF;
 		break;
 	case 0x008:
-		// Log::debug("[Video] write BM%d_SCROLLY: %04X", index, value);
+		//printf("[Video] write BM%d_SCROLLY: %04X\n", index, value);
 		layer->scrolly = value & 0x1FF;
 		break;
 	case 0x010:
-		// Log::debug("[Video] write BM%d_SCREENX: %04X", index, value);
+		//printf("[Video] write BM%d_SCREENX: %04X\n", index, value);
 		layer->screenx = value & 0x1FF;
 		break;
 	case 0x018:
-		// Log::debug("[Video] write BM%d_SCREENY: %04X", index, value);
+		//printf("[Video] write BM%d_SCREENY: %04X\n", index, value);
 		layer->screeny = value & 0x1FF;
 		break;
 	case 0x020:
-		// Log::debug("[Video] write BM%d_CLIPWIDTH: %04X", index, value);
+		//printf("[Video] write BM%d_CLIPWIDTH: %04X\n", index, value);
 		layer->w = value & 0xFF;
 		layer->clipx = value >> 8;
 		break;
 	case 0x028:
-		// Log::debug("[Video] write BM%d_HEIGHT: %04X", index, value);
+		//printf("[Video] write BM%d_HEIGHT: %04X\n", index, value);
 		layer->h = value & 0xFF;
 		break;
 	case 0x030:
-		// Log::debug("[Video] write BM_CTRL: %04X", value);
+		//printf("[Video] write BM_CTRL: %04X\n", value);
 		vdp.bitmap_ctrl = value;
 		break;
 	case 0x040:
-		// Log::debug("[Video] write BM_PALSEL: %04X", value);
+		//printf("[Video] write BM_PALSEL: %04X\n", value);
 		vdp.bitmap_palsel = value;
 		break;
 	case 0x050:
-		// Log::debug("[Video] write BM%d_BUFFER_CTRL: %04X", index, value);
+		//printf("[Video] write BM%d_BUFFER_CTRL: %04X\n", index, value);
 		layer->buffer_ctrl = value;
 		break;
 	default:
-		assert(0);
+		// assert(0);
 		break;
 	}
 }
@@ -539,7 +533,7 @@ uint16_t ctrl_read16(uint32_t addr)
 	case 0x004:
 		return vdp.vcount;
 	default:
-		assert(0);
+		// assert(0);
 		return 0;
 	}
 }
@@ -560,7 +554,7 @@ void ctrl_write16(uint32_t addr, uint16_t value)
 	switch (addr)
 	{
 	case 0x000:
-		// Log::debug("[Video] write MODE: %04X", value);
+		//printf("[Video] write MODE: %04X\n", value);
 		vdp.mode.use_pal = value & 0x1;
 		vdp.mode.extra_scanlines = (value >> 1) & 0x1;
 		vdp.mode.unk = (value >> 2) & 0x1;
@@ -570,7 +564,6 @@ void ctrl_write16(uint32_t addr, uint16_t value)
 		assert(!vdp.mode.use_pal);
 
 		vdp.visible_scanlines = (vdp.mode.extra_scanlines) ? 0xF0 : 0xE0;
-		LoopyIO::set_controller_scan_mode(vdp.mode.pad_scan, vdp.mode.mouse_scan);
 		break;
 	case 0x006:
 		if (value & 0x01)
@@ -578,29 +571,19 @@ void ctrl_write16(uint32_t addr, uint16_t value)
 			vdp.capture_enable = true;
 		}
 
-		if (value & 0x02)
+		//Bit 0 turns on display capture, only log writes to other bits for now
+		if (value != 0x01)
 		{
-			LoopyIO::update_print_temp();
-		}
-
-		if (value & 0x04)
-		{
-			LoopyIO::update_sensors();
-		}
-
-		//Only log writes to unimplemented bits
-		if ((value & ~0x0007) != 0x01)
-		{
-			// Log::debug("[Video] write ctrl 006: %04X", value);
+			//printf("[Video] write ctrl 006: %04X\n", value);
 		}
 		break;
 	case 0x008:
-		// Log::debug("[Video] write SYNC_IRQ_CTRL: %04X", value);
+		//printf("[Video] write SYNC_IRQ_CTRL: %04X\n", value);
 		vdp.sync_irq_ctrl.irq1_enable = value & 0x1;
 		vdp.sync_irq_ctrl.irq1_source = (value >> 1) & 0x1;
 		break;
 	default:
-		assert(0);
+		// assert(0);
 		break;
 	}
 }
@@ -656,7 +639,7 @@ uint16_t bgobj_read16(uint32_t addr)
 	case 0x020:
 		return vdp.tilebase;
 	default:
-		assert(0);
+		// assert(0);
 		return 0;
 	}
 }
@@ -677,7 +660,7 @@ void bgobj_write16(uint32_t addr, uint16_t value)
 	switch (addr)
 	{
 	case 0x000:
-		// Log::debug("[Video] write BG_CTRL: %04X", value);
+		//printf("[Video] write BG_CTRL: %04X\n", value);
 		vdp.bg_ctrl.shared_maps = value & 0x1;
 		vdp.bg_ctrl.map_size = (value >> 1) & 0x3;
 		vdp.bg_ctrl.bg0_8bit = (value >> 3) & 0x1;
@@ -690,7 +673,7 @@ void bgobj_write16(uint32_t addr, uint16_t value)
 	case 0x006:
 	{
 		int index = (addr - 0x002) >> 2;
-		// Log::debug("[Video] write BG%d_SCROLLX: %04X", index, value);
+		//printf("[Video] write BG%d_SCROLLX: %04X\n", index, value);
 		vdp.bg_scrollx[index] = value & 0xFFF;
 		break;
 	}
@@ -698,7 +681,7 @@ void bgobj_write16(uint32_t addr, uint16_t value)
 	case 0x008:
 	{
 		int index = (addr - 0x004) >> 2;
-		// Log::debug("[Video] write BG%d_SCROLLY: %04X", index, value);
+		//printf("[Video] write BG%d_SCROLLY: %04X\n", index, value);
 		vdp.bg_scrolly[index] = value & 0xFFF;
 		break;
 	}
@@ -706,12 +689,12 @@ void bgobj_write16(uint32_t addr, uint16_t value)
 	case 0x00C:
 	{
 		int index = (addr - 0x00A) >> 1;
-		// Log::debug("[Video] write BG%d_PALSEL: %04X", index, value);
+		//printf("[Video] write BG%d_PALSEL: %04X\n", index, value);
 		vdp.bg_palsel[index] = value;
 		break;
 	}
 	case 0x010:
-		// Log::debug("[Video] write OBJ_CTRL: %04X", value);
+		//printf("[Video] write OBJ_CTRL: %04X\n", value);
 		vdp.obj_ctrl.id_offs = value & 0xFF;
 
 		//Note the reversed order!
@@ -723,16 +706,16 @@ void bgobj_write16(uint32_t addr, uint16_t value)
 	case 0x014:
 	{
 		int index = (addr - 0x012) >> 1;
-		// Log::debug("[Video] write OBJ%d_PALSEL: %04X", index, value);
+		//printf("[Video] write OBJ%d_PALSEL: %04X\n", index, value);
 		vdp.obj_palsel[index] = value;
 		break;
 	}
 	case 0x020:
-		// Log::debug("[Video] write TILEBASE: %04X", value);
+		//printf("[Video] write TILEBASE: %04X\n", value);
 		vdp.tilebase = value & 0xFF;
 		break;
 	default:
-		assert(0);
+		// assert(0);
 		break;
 	}
 }
@@ -790,7 +773,7 @@ uint16_t display_read16(uint32_t addr)
 	case 0x008:
 		return vdp.backdrops[0];
 	default:
-		assert(0);
+		// assert(0);
 		return 0;
 	}
 }
@@ -812,7 +795,7 @@ void display_write16(uint32_t addr, uint16_t value)
 	{
 	case 0x000:
 		vdp.dispmode = value & 0x7;
-		// Log::debug("[Video] write DISPMODE: %04X", value);
+		//printf("[Video] write DISPMODE: %04X\n", value);
 		break;
 	case 0x002:
 		for (int i = 0; i < 2; i++)
@@ -830,7 +813,7 @@ void display_write16(uint32_t addr, uint16_t value)
 		vdp.layer_ctrl.bitmap_screen_mode[1] = (value >> 10) & 0x3;
 		vdp.layer_ctrl.obj_screen_mode[0] = (value >> 12) & 0x3;
 		vdp.layer_ctrl.obj_screen_mode[1] = value >> 14;
-		// Log::debug("[Video] write LAYER_CTRL: %04X", value);
+		//printf("[Video] write LAYER_CTRL: %04X\n", value);
 		break;
 	case 0x004:
 		vdp.color_prio.prio_mode = value & 0xF;
@@ -838,7 +821,7 @@ void display_write16(uint32_t addr, uint16_t value)
 		vdp.color_prio.output_screen_b = (value >> 5) & 0x1;
 		vdp.color_prio.output_screen_a = (value >> 6) & 0x1;
 		vdp.color_prio.blend_mode = (value >> 7) & 0x1;
-		// Log::debug("[Video] write COLORPRIO: %04X", value);
+		//printf("[Video] write COLORPRIO: %04X\n", value);
 		break;
 	case 0x006:
 		//Note the reversed order!
@@ -852,7 +835,7 @@ void display_write16(uint32_t addr, uint16_t value)
 		vdp.capture_ctrl.format = (value >> 8) & 0x3;
 		break;
 	default:
-		assert(0);
+		// assert(0);
 		break;
 	}
 }
@@ -878,7 +861,7 @@ uint16_t irq_read16(uint32_t addr)
 	case 0x004:
 		return vdp.irq0_vcmp;
 	default:
-		assert(0);
+		// assert(0);
 		return 0;
 	}
 }
@@ -905,7 +888,7 @@ void irq_write16(uint32_t addr, uint16_t value)
 		vdp.cmp_irq_ctrl.nmi_enable = (value >> 2) & 0x1;
 		vdp.cmp_irq_ctrl.use_vcmp = (value >> 5) & 0x1;
 		vdp.cmp_irq_ctrl.irq0_enable2 = (value >> 7) & 0x1;
-		// Log::debug("[VDP] write CMP_IRQ_CTRL: %04X", value);
+		//printf("[VDP] write CMP_IRQ_CTRL: %04X\n", value);
 		break;
 	case 0x002:
 		vdp.irq0_hcmp = value & 0x1FF;
@@ -936,7 +919,7 @@ uint16_t dma_ctrl_read16(uint32_t addr)
 	case 0x004:
 		return vdp.dma_value;
 	default:
-		assert(0);
+		// assert(0);
 		return 0;
 	}
 }
@@ -957,7 +940,7 @@ void dma_ctrl_write16(uint32_t addr, uint16_t value)
 	switch (addr)
 	{
 	case 0x000:
-		// Log::debug("[Video] write dma ctrl 000: %04X", value);
+		//printf("[Video] write dma ctrl 000: %04X\n", value);
 		break;
 	case 0x002:
 		//TODO: what does bit 8 do? Seems to have no effect in HW tests at this time
@@ -967,7 +950,7 @@ void dma_ctrl_write16(uint32_t addr, uint16_t value)
 		vdp.dma_value = value & 0xFF;
 		break;
 	default:
-		assert(0);
+		// assert(0);
 		break;
 	}
 }

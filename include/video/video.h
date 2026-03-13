@@ -1,11 +1,7 @@
-#ifndef __LOOPYMSE__VIDEO__
-#define __LOOPYMSE__VIDEO__
+#ifndef LOOPYMSE__VIDEO
+#define LOOPYMSE__VIDEO
 
 #include <cstdint>
-#include <filesystem>
-#include <string>
-
-namespace fs = std::filesystem;
 
 namespace Video
 {
@@ -63,12 +59,9 @@ void shutdown();
 
 void start_frame();
 bool check_frame_end();
-int get_display_scanlines();
-uint16_t get_background_color();
+
 uint16_t* get_display_output();
 
-void dump_all_bmps(int image_type, fs::path base_path);	 //TEMP ADDED
-void dump_current_frame(int image_type, fs::path path);
 void dump_for_serial();
 
 //TODO: should these MMIO accessors be moved to a different file?
@@ -152,6 +145,6 @@ void dma_write8(uint32_t addr, uint8_t value);
 void dma_write16(uint32_t addr, uint16_t value);
 void dma_write32(uint32_t addr, uint32_t value);
 
-}  // namespace Video
+}
 
 #endif

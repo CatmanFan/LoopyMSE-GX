@@ -6,9 +6,11 @@
 	<release_date>202603120000</release_date>
 	<short_description>Casio Loopy emulator (WIP)</short_description>
 	<long_description>(Emulator ported by Mr. Lechkar / CatmanFan)
-WARNING: This is a POC port to Wii, may not run as intended.
+WARNING: This is a POC port to Wii, may not run as intended. 
 
-Expects BIOS in "apps/LoopyMSE-Wii/bios.bin" and game in "apps/LoopyMSE-Wii/rom.bin". It will not load if either of those files are missing!
+BIOS, sound BIOS and game files should be placed in the same directory as boot.dol, as bios.bin, soundbios.bin and rom.bin respectively. The emulator will not run if the BIOS or game ROM cannot be found!
+
+To exit, press and hold the Home button.
 
 ** Original description follows below **
 

@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__EXPANSION__
-#define __LOOPYMSE__EXPANSION__
+#ifndef LOOPYMSE__EXPANSION
+#define LOOPYMSE__EXPANSION
 
 #include "core/config.h"
 

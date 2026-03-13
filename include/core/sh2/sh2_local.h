@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__CORE_SH2_LOCAL__
-#define __LOOPYMSE__CORE_SH2_LOCAL__
+#ifndef LOOPYMSE__SH2_LOCAL
+#define LOOPYMSE__SH2_LOCAL
 
 #include <cstdint>
 #include <unordered_map>

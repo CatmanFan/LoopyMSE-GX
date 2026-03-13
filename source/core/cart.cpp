@@ -23,7 +23,7 @@ static void commit_sram()
 
 void initialize(Config::CartInfo& info)
 {
-	state = {};
+	// state = {};
 
 	state.rom = info.rom;
 	state.sram = info.sram;
@@ -46,10 +46,9 @@ void initialize(Config::CartInfo& info)
 	Memory::map_sh2_pagetable(state.sram.data(), SRAM_START, state.sram.size());
 }
 
-void shutdown(Config::CartInfo& info)
+void shutdown()
 {
 	commit_sram();
-	info.sram = state.sram;
 }
 
 void sram_commit_check()

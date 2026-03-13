@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__PERIPHERALS_SH2_DMAC__
-#define __LOOPYMSE__PERIPHERALS_SH2_DMAC__
+#ifndef LOOPYMSE__SH2_DMAC
+#define LOOPYMSE__SH2_DMAC
 
 #include <cstdint>
 

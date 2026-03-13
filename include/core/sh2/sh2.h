@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__CORE_SH2__
-#define __LOOPYMSE__CORE_SH2__
+#ifndef LOOPYMSE__SH2
+#define LOOPYMSE__SH2
 
 namespace SH2
 {

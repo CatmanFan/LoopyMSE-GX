@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__PERIPHERALS_SH2_PFC__
-#define __LOOPYMSE__PERIPHERALS_SH2_PFC__
+#ifndef LOOPYMSE__SH2_PFC
+#define LOOPYMSE__SH2_PFC
 
 #include <cstdint>
 

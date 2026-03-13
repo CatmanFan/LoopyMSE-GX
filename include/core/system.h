@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__CORE_SYSTEM__
-#define __LOOPYMSE__CORE_SYSTEM__
+#ifndef LOOPYMSE__CORE_SYSTEM
+#define LOOPYMSE__CORE_SYSTEM
 
 #include "core/config.h"
 
@@ -7,7 +7,7 @@ namespace System
 {
 
 void initialize(Config::SystemInfo& config);
-void shutdown(Config::SystemInfo& config);
+void shutdown();
 
 void run();
 

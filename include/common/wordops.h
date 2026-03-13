@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__COMMON_WORDOPS__
-#define __LOOPYMSE__COMMON_WORDOPS__
+#ifndef LOOPYMSE__COMMON_WORDOPS
+#define LOOPYMSE__COMMON_WORDOPS
 
 #include <cstdint>
 

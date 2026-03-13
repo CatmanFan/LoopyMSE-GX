@@ -99,7 +99,7 @@ void write16(uint32_t addr, uint16_t value)
 
 void initialize()
 {
-	gpio = {};
+	// gpio = {};
 }
 
 }  // namespace SH2::OCPM::PFC

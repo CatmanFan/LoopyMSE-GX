@@ -84,7 +84,7 @@ static bool handle_exception()
 
 void initialize()
 {
-	sh2 = {};
+	// sh2 = {};
 
 	sh2.pagetable = Memory::get_sh2_pagetable();
 

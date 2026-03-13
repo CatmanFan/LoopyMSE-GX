@@ -216,8 +216,8 @@ static TimerDev get_dev_from_addr(uint32_t addr)
 
 void initialize()
 {
-	state = {};
-	ev_func = {};
+	// state = {};
+	// ev_func = {};
 
 	for (int i = 0; i < TIMER_COUNT; i++)
 	{

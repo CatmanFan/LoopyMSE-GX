@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__PERIPHERALS_SH2_SERIAL__
-#define __LOOPYMSE__PERIPHERALS_SH2_SERIAL__
+#ifndef LOOPYMSE__SH2_SERIAL
+#define LOOPYMSE__SH2_SERIAL
 
 #include <cstdint>
 #include <functional>

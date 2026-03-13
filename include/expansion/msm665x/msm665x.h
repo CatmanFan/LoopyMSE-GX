@@ -6,8 +6,8 @@
 * Quick and dirty port by partlyhuman, so don't blame kasami for this module!
 */
 
-#ifndef __LOOPYMSE__MSM665X__
-#define __LOOPYMSE__MSM665X__
+#ifndef LOOPYMSE__MSM665X
+#define LOOPYMSE__MSM665X
 
 #include <string>
 

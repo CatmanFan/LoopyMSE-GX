@@ -3,6 +3,11 @@
 #include <string>
 #include <fstream>
 #include <climits>
+#include <string.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <gccore.h>
 #include <wiiuse/wpad.h>
@@ -10,20 +15,153 @@
 #include <fat.h>
 #include <sdcard/wiisd_io.h>
 
-#include <string.h>
-#include <dirent.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
 
 #include <SDL2/SDL.h>
-#include "core/system.h"
-#include "core/config.h"
-#include "common/bswp.h"
-#include "input/input.h"
 
-static void *xfb = NULL;
-static GXRModeObj *rmode = NULL;
+#include "common/bswp.h"
+#include "core/config.h"
+#include "core/system.h"
+#include "input/input.h"
+#include "sound/sound.h"
+#include "video/video.h"
+
+namespace SDL
+{
+	using Video::DISPLAY_HEIGHT;
+	using Video::DISPLAY_WIDTH;
+
+	constexpr static int FRAME_WIDTH = 640;
+	constexpr static int FRAME_HEIGHT = 480;
+
+	// Scales the frame size up to 4:3 640x480
+	static constexpr float ASPECT_CORRECT_SCALE_X = (640.0f / FRAME_WIDTH);
+
+	struct Screen
+	{
+		SDL_Renderer* renderer;
+		SDL_Window* window;
+		SDL_Texture* texture;
+
+		SDL_Texture* prescaled;
+		int visible_scanlines = DISPLAY_HEIGHT;
+		int window_int_scale = 1;
+		int prescale = 1;
+		bool correct_aspect_ratio;
+		bool crop_overscan;
+		bool antialias;
+	};
+
+	static Screen screen;
+
+	bool initialize()
+	{
+		if (SDL_Init(SDL_INIT_VIDEO) < 0)
+		{
+			printf("SDL2 error: %s\n", SDL_GetError());
+			return false;
+		}
+
+		//Try synchronizing drawing to VBLANK
+		SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+
+		//Set up SDL screen parameters
+		screen.correct_aspect_ratio = true;
+		screen.crop_overscan = false;
+		screen.antialias = false;
+		screen.window_int_scale = 1;
+		screen.prescale = screen.antialias ? 4 : 1;
+
+		//Set up SDL screen
+		SDL_CreateWindowAndRenderer(2 * FRAME_WIDTH, 2 * FRAME_HEIGHT, 0, &screen.window, &screen.renderer);
+		SDL_SetWindowTitle(screen.window, "Rupi");
+		SDL_SetWindowSize(screen.window, 2 * FRAME_WIDTH, 2 * FRAME_HEIGHT);
+		SDL_SetWindowResizable(screen.window, SDL_FALSE);
+		SDL_RenderSetLogicalSize(screen.renderer, 2 * FRAME_WIDTH, 2 * FRAME_HEIGHT);
+
+		screen.texture = SDL_CreateTexture(screen.renderer, SDL_PIXELFORMAT_ARGB1555, SDL_TEXTUREACCESS_STREAMING, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+
+		SDL_SetTextureBlendMode(screen.texture, SDL_BLENDMODE_BLEND);
+		SDL_SetTextureScaleMode(screen.texture, SDL_ScaleModeNearest);
+
+		if (screen.prescale > 1)
+		{
+			screen.prescaled = SDL_CreateTexture(
+				screen.renderer, SDL_PIXELFORMAT_ARGB1555, SDL_TEXTUREACCESS_TARGET, DISPLAY_WIDTH * screen.prescale,
+				DISPLAY_HEIGHT * screen.prescale
+			);
+			SDL_SetTextureBlendMode(screen.prescaled, SDL_BLENDMODE_BLEND);
+			SDL_SetTextureScaleMode(screen.prescaled, SDL_ScaleModeBest);
+		}
+		return true;
+	}
+
+	void shutdown() {
+		//Destroy window, then kill SDL2
+		SDL_DestroyTexture(screen.texture);
+		SDL_DestroyRenderer(screen.renderer);
+		SDL_DestroyWindow(screen.window);
+
+		SDL_Quit();
+	}
+
+	void update(uint16_t* display_output)
+	{
+		// Draw screen
+		void* pixels;
+		int pitch;
+		// More efficient alternative to SDL_UpdateTexture(screen.texture, NULL, display_output, sizeof(uint16_t) * DISPLAY_WIDTH);
+		if (SDL_LockTexture(screen.texture, nullptr, &pixels, &pitch) == 0)
+		{
+			memcpy(pixels, display_output, sizeof(uint16_t) * DISPLAY_WIDTH * DISPLAY_HEIGHT);
+			SDL_UnlockTexture(screen.texture);
+		}
+		// SDL_RenderCopy(screen.renderer, screen.texture, NULL, NULL);
+		// SDL_RenderPresent(screen.renderer);
+
+		// Prescale
+		if (screen.prescaled)
+		{
+			SDL_SetRenderTarget(screen.renderer, screen.prescaled);
+			SDL_RenderClear(screen.renderer);
+			SDL_RenderCopy(screen.renderer, screen.texture, nullptr, nullptr);
+		}
+
+		// Change target back to screen (must be done before querying renderer output size!)
+		SDL_SetRenderTarget(screen.renderer, nullptr);
+		SDL_RenderClear(screen.renderer);
+
+		SDL_Rect src = {0, 0, DISPLAY_WIDTH * screen.prescale, DISPLAY_HEIGHT * screen.prescale};
+		SDL_Rect frame = {0, 0, FRAME_WIDTH * screen.prescale, FRAME_HEIGHT * screen.prescale};
+		if (screen.crop_overscan) frame = src;
+		SDL_Rect dest = {0};
+		SDL_GetRendererOutputSize(screen.renderer, &dest.w, &dest.h);
+
+		float scale_x = (float)dest.w / frame.w;
+		float scale_y = (float)dest.h / frame.h;
+		float scale = SDL_min(scale_x, scale_y);
+		if (!screen.antialias && !screen.correct_aspect_ratio)
+		{
+			scale = SDL_floorf(scale);
+		}
+		scale_x = scale_y = scale;
+		if (screen.correct_aspect_ratio)
+		{
+			scale_x *= ASPECT_CORRECT_SCALE_X;
+		}
+		float w = scale_x * src.w;
+		float h = scale_y * src.h;
+		dest.x = (dest.w - w) / 2;
+		dest.y = (dest.h - h) / 2;
+		dest.w = w;
+		dest.h = h;
+
+		SDL_RenderCopy(screen.renderer, (screen.prescaled ? screen.prescaled : screen.texture), &src, &dest);
+		SDL_RenderPresent(screen.renderer);
+	}
+}
 
 static std::string devicePrefix;
 
@@ -31,77 +169,9 @@ static std::string remove_extension(std::string file_path)
 {
 	auto pos = file_path.find(".");
 	if (pos == std::string::npos)
-	{
 		return file_path;
-	}
 
 	return file_path.substr(0, pos);
-}
-
-// Global Screen Resources
-static constexpr int DISPLAY_WIDTH = 640;
-static constexpr int DISPLAY_HEIGHT = 480;
-static constexpr int PRESCALE_FACTOR = 4;
-// Logical size includes border to allow for both 224 line and 240 line modes, and show some of the background effects.
-// In reality the Loopy active area is drawn inside this and borders are visible, in 240 line mode more of this is used.
-static constexpr int FRAME_WIDTH = 280;
-static constexpr int FRAME_HEIGHT = 240;
-// Scales the frame size up to 4:3 320x240
-static constexpr float ASPECT_CORRECT_SCALE_X = (320.0f / FRAME_WIDTH);
-
-struct Screen
-{
-	SDL_Renderer* renderer;
-	SDL_Window* window;
-	SDL_Texture* framebuffer;
-};
-
-static Screen screen;
-
-static void update(uint16_t* display_output)
-{
-	// Change target back to screen (must be done before querying renderer output size!)
-	SDL_SetRenderTarget(screen.renderer, nullptr);
-	SDL_SetRenderDrawColor(screen.renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-	SDL_RenderClear(screen.renderer);
-
-    SDL_UpdateTexture(screen.framebuffer, NULL, display_output, sizeof(uint16_t) * DISPLAY_WIDTH);
-    SDL_RenderCopy(screen.renderer, screen.framebuffer, NULL, NULL);
-    SDL_RenderPresent(screen.renderer);
-}
-
-// SDL2 Renderer Setup
-static bool initSdl2()
-{
-	//Allow use of our own main()
-	SDL_SetMainReady();
-
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) < 0)
-	{
-		printf("SDL2: %s\n", SDL_GetError());
-		return false;
-	}
-
-    // make sure SDL cleans up before exit
-    // atexit(SDL_Quit);
-    SDL_ShowCursor(SDL_DISABLE);
-
-    //Try synchronizing drawing to VBLANK
-    SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-
-    //Set up SDL screen
-    SDL_CreateWindowAndRenderer(2 * DISPLAY_WIDTH, 2 * DISPLAY_HEIGHT, 0, &screen.window, &screen.renderer);
-    SDL_SetWindowTitle(screen.window, "Rupi");
-    SDL_SetWindowSize(screen.window, 2 * DISPLAY_WIDTH, 2 * DISPLAY_HEIGHT);
-    SDL_SetWindowResizable(screen.window, SDL_FALSE);
-    SDL_RenderSetLogicalSize(screen.renderer, 2 * DISPLAY_WIDTH, 2 * DISPLAY_HEIGHT);
-
-    screen.framebuffer = SDL_CreateTexture(screen.renderer, SDL_PIXELFORMAT_ARGB1555, SDL_TEXTUREACCESS_STREAMING, DISPLAY_WIDTH, DISPLAY_HEIGHT);
-
-	// Mouse mappings don't really need configuration
-	Input::add_mouse_binding(SDL_BUTTON_LEFT, Input::MouseButton::MOUSE_L);
-	Input::add_mouse_binding(SDL_BUTTON_RIGHT, Input::MouseButton::MOUSE_R);
-	return true;
 }
 
 static bool initFat() {
@@ -133,26 +203,26 @@ static bool initFat() {
 
 static bool shutdown = false;
 
-static void cbShutdown() { shutdown = true; SYS_ResetSystem(SYS_POWEROFF, 0, 0); exit(0); }
-static void cbShutdownWpad(s32 chan) { shutdown = true; SYS_ResetSystem(SYS_POWEROFF, 0, 0); exit(0); }
+static void cbShutdown() { shutdown = true; }
+static void cbShutdownWpad(s32 chan) { shutdown = true; }
 static void cbReset(u32 chan, void* arg) { exit(0); }
 
 static void fatal(const char *txt)
 {
-	printf("--ERROR--\n%s. Exiting in 5 seconds\n", txt);
-	perror("msg");
+	printf("HALT: %s, exiting in 5 seconds\n", txt);
+	// perror("msg");
 	sleep(5);
 	exit(0);
 }
 
 static std::string appPath;
-static void CreateAppPath(char * origpath)
+static void CreateAppPath(std::string file_path)
 {
-	fs::path p = origpath;
-	appPath = p.parent_path();
-
-	// FOR DOLPHIN ONLY
-	if (strcmp(origpath, "app") == 0) { appPath = "sd:/apps/LoopyMSE-Wii"; }
+	auto pos = file_path.find(".");
+	if (pos == std::string::npos)
+		appPath = "sd:/apps/LoopyMSE-GX";
+	else
+		appPath = file_path.substr(0, pos - 4);
 
 	printf("Running from %s\n", appPath.c_str());
 }
@@ -169,31 +239,18 @@ int main(int argc, char **argv) {
 	// Enable all buttons and accelerometer for all connected controllers
 	WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
 
-	// Obtain the preferred video mode from the system
-	// This will correspond to the settings in the Wii menu
-	rmode = VIDEO_GetPreferredMode(NULL);
-
-	// Allocate memory for the display in the uncached region
-	xfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(rmode));
-
-	// Initialise the console, required for printf
+	// Initialise the console
+	/*GXRModeObj *rmode = VIDEO_GetPreferredMode(NULL);
+	void *xfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(rmode));
 	console_init(xfb,20,20,rmode->fbWidth,rmode->xfbHeight,rmode->fbWidth*VI_DISPLAY_PIX_SZ);
-
-	// Set up the video registers with the chosen mode
 	VIDEO_Configure(rmode);
-
-	// Tell the video hardware where our display memory is
 	VIDEO_SetNextFramebuffer(xfb);
-
-	// Make the display visible
 	VIDEO_SetBlack(false);
-
-	// Flush the video register changes to the hardware
 	VIDEO_Flush();
 
 	// Wait for Video setup to complete
 	VIDEO_WaitVSync();
-	if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
+	if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();*/
 
 	SYS_SetPowerCallback(cbShutdown);
 	WPAD_SetPowerButtonCallback(cbShutdownWpad);
@@ -211,8 +268,6 @@ int main(int argc, char **argv) {
 		fatal("failed to init libfat");
 	}
 
-	Config::SystemInfo config;
-	
 	#ifdef HW_RVL
 	// store path app was loaded from
 	if(argc > 0 && argv[0] != NULL)
@@ -223,23 +278,32 @@ int main(int argc, char **argv) {
 	std::string bios_name = appPath + "/bios.bin";
 	std::string sound_rom_name = appPath + "/soundbios.bin";
 
+	Config::SystemInfo config;
+
 	std::ifstream cart_file(cart_name, std::ios::binary);
-	if (!cart_file.is_open()) { fatal("failed to open ROM"); }
+	if (!cart_file.is_open())
+	{
+		fatal("rom.bin not found");
+	}
 	config.cart.rom.assign(std::istreambuf_iterator<char>(cart_file), {});
 	cart_file.close();
 
 	std::ifstream bios_file(bios_name, std::ios::binary);
-	if (!bios_file.is_open()) { fatal("failed to open BIOS"); }
+	if (!bios_file.is_open())
+	{
+		fatal("bios.bin not found");
+	}
 	config.bios_rom.assign(std::istreambuf_iterator<char>(bios_file), {});
 	bios_file.close();
 
-	// std::ifstream sound_rom_file(sound_rom_name, std::ios::binary);
-	// if (!sound_rom_file.is_open())
-		// printf("Warning: Sound ROM not detected\n");
-	// else {
-		// config.sound_rom.assign(std::istreambuf_iterator<char>(sound_rom_file), {});
-		// sound_rom_file.close();
-	// }
+	// If last argument is given, load the sound ROM
+	std::ifstream sound_rom_file(sound_rom_name, std::ios::binary);
+	if (!sound_rom_file.is_open())
+	{
+		printf("Warning: soundbios.bin not found");
+	}
+	config.sound_rom.assign(std::istreambuf_iterator<char>(sound_rom_file), {});
+	sound_rom_file.close();
 
 	//Determine the size of SRAM from the cartridge header
 	uint32_t sram_start, sram_end;
@@ -259,20 +323,16 @@ int main(int argc, char **argv) {
 		printf("Successfully found SRAM\n");
 		config.cart.sram.assign(std::istreambuf_iterator<char>(sram_file), {});
 		sram_file.close();
-
-		//Ensure SRAM is at the proper size. If no file is loaded, it will be filled with 0xFF.
-		//If a file was loaded but was smaller than the SRAM size, the uninitialized bytes will be 0xFF.
-		//If the file was larger, then the vector size is clamped
-		// config.cart.sram.resize(sram_size, 0xFF);
 	}
+
+	//Ensure SRAM is at the proper size. If no file is loaded, it will be filled with 0xFF.
+	//If a file was loaded but was smaller than the SRAM size, the uninitialized bytes will be 0xFF.
+	//If the file was larger, then the vector size is clamped
+	// printf("Resizing SRAM\n");
+	// config.cart.sram.resize(sram_size, 0xFF);
 
 	//Initialize the emulator and all of its subprojects
-	printf("Starting...\n");
-
-	if (!initSdl2()) {
-		fatal("failed to init SDL2");
-	}
-
+	printf("Starting virtual machine\n");
 	System::initialize(config);
 
 	//All subprojects have been initialized, so it is safe to reference them now
@@ -291,76 +351,45 @@ int main(int argc, char **argv) {
 	Input::add_key_binding(SDLK_UP, Input::PAD_UP);
 	Input::add_key_binding(SDLK_DOWN, Input::PAD_DOWN);
 
-	bool has_quit = false;
-	uint64_t last_frame_ticks = SDL_GetPerformanceCounter();
-	while (!has_quit)
+	printf("Switching to SDL\n");
+	if (!SDL::initialize())
+		fatal("failed to init SDL");
+
+	while (SYS_MainLoop())
 	{
-		constexpr int framerate_target = 60;  //TODO: get this from Video if it can be changed (e.g. for PAL mode)
-		constexpr int framerate_max_lag = 5;
-		//Check how much time passed since we drew the last frame
-		uint64_t ticks_per_frame = SDL_GetPerformanceFrequency() / framerate_target;
-		uint64_t now_ticks = SDL_GetPerformanceCounter();
-		uint64_t ticks_since_last_frame = now_ticks - last_frame_ticks;
-
-		//See how many we need to draw
-		//If we're vsynced to a 60Hz display with no lag, this should stay at 1 most of the time
-		uint64_t draw_frames = ticks_since_last_frame / ticks_per_frame;
-		last_frame_ticks += draw_frames * ticks_per_frame;
-
-		//If too far behind, draw one frame and start timing again from now
-		if (draw_frames > framerate_max_lag)
-		{
-			// printf("%d frames behind, skipping ahead...", draw_frames);
-			last_frame_ticks = now_ticks;
-			draw_frames = 1;
+		WPAD_ScanPads();
+		if (WPAD_ButtonsHeld(0) & WPAD_BUTTON_HOME) {
+			exit(0);
+		}
+		if (shutdown) {
+			break;
 		}
 
-		if (draw_frames && config.cart.is_loaded())
-		{
-			while (draw_frames > 0)
-			{
-				System::run();
-				draw_frames--;
-			}
+		System::run();
+		SDL::update(System::get_display_output());
 
-			// Draw screen
-			update(System::get_display_output());
-		}
-
-		SDL_Event e;
+		/*SDL_Event e;
 		while (SDL_PollEvent(&e))
 		{
 			switch (e.type)
 			{
-			case SDL_QUIT:
-				has_quit = true;
-				break;
-			case SDL_JOYDEVICEADDED:
-				SDL_JoystickOpen(0);
-				break;
-			case SDL_JOYBUTTONDOWN:
+			// case SDL_QUIT:
+				// has_quit = true;
+				// break;
+			case SDL_KEYDOWN:
 				Input::set_key_state(e.key.keysym.sym, true);
 				break;
-			case SDL_JOYBUTTONUP:
+			case SDL_KEYUP:
 				Input::set_key_state(e.key.keysym.sym, false);
 				break;
 			}
-		}
+		}*/
 
-        WPAD_ScanPads();
-        if ((WPAD_ButtonsHeld(0) & WPAD_BUTTON_HOME) || shutdown)
-			has_quit = true;
 	}
 
-	printf("Stopped emulation, exiting\n");
-	System::shutdown(config);
-
-	//Destroy window, then kill SDL2
-	SDL_DestroyTexture(screen.framebuffer);
-	SDL_DestroyRenderer(screen.renderer);
-	SDL_DestroyWindow(screen.window);
+	// System::shutdown();
 	VIDEO_SetBlack(true);
-	SDL_Quit();
+	// SDL::shutdown();
 
 	// fatUnmount(0);
 

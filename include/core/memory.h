@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__CORE_MEMORY__
-#define __LOOPYMSE__CORE_MEMORY__
+#ifndef LOOPYMSE__CORE_MEMORY
+#define LOOPYMSE__CORE_MEMORY
 
 #include <cstdint>
 #include <vector>

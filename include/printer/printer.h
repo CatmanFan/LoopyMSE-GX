@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__PRINTER__
-#define __LOOPYMSE__PRINTER__
+#ifndef LOOPYMSE__PRINTER
+#define LOOPYMSE__PRINTER
 
 #include "core/config.h"
 

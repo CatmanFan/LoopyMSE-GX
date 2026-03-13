@@ -229,7 +229,7 @@ void write32(uint32_t addr, uint32_t value)
 
 void initialize()
 {
-	state = {};
+	// state = {};
 	in_dma_state = false;
 
 	//Auto mode should always go through

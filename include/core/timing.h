@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__CORE_TIMING__
-#define __LOOPYMSE__CORE_TIMING__
+#ifndef LOOPYMSE__CORE_TIMING
+#define LOOPYMSE__CORE_TIMING
 
 #include <functional>
 #include <string>

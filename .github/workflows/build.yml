@@ -20,14 +20,12 @@ jobs:
       uses: actions/checkout@main
 
     - name: Build artifacts (Wii)
-      run: make
-
-    - name: Make HBC app
-      run:  |
+      run: |
+        make
         cp ./LoopyMSE.dol ./hbc/apps/LoopyMSE-GX/boot.dol
 
     - name: Upload artifacts
       uses: actions/upload-artifact@main
       with:
-        name: loopymse
+        name: LoopyMSE-GX
         path: ./hbc/

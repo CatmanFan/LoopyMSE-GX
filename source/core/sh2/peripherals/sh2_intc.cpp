@@ -38,7 +38,7 @@ static void send_irq_signal()
 
 void initialize()
 {
-	state = {};
+	// state = {};
 
 	//NMI and UserBreak have fixed priorities, everything else is configurable
 	state.prios[(int)IRQ::NMI] = 16;

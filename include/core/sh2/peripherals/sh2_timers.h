@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__PERIPHERALS_SH2_TIMERS__
-#define __LOOPYMSE__PERIPHERALS_SH2_TIMERS__
+#ifndef LOOPYMSE__SH2_TIMERS
+#define LOOPYMSE__SH2_TIMERS
 
 #include <cstdint>
 

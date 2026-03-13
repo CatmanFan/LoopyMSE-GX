@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__PERIPHERALS_SH2_INTC__
-#define __LOOPYMSE__PERIPHERALS_SH2_INTC__
+#ifndef LOOPYMSE__SH2_INTC
+#define LOOPYMSE__SH2_INTC
 
 #include <cstdint>
 

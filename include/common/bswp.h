@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__COMMON_BSWP__
-#define __LOOPYMSE__COMMON_BSWP__
+#ifndef LOOPYMSE__COMMON_BSWP
+#define LOOPYMSE__COMMON_BSWP
 
 #include <cstdint>
 

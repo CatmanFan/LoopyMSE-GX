@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__CORE_SH2_BUS__
-#define __LOOPYMSE__CORE_SH2_BUS__
+#ifndef LOOPYMSE__SH2_BUS
+#define LOOPYMSE__SH2_BUS
 
 #include <cstdint>
 

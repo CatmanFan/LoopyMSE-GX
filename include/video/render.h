@@ -1,11 +1,10 @@
-#ifndef __LOOPYMSE__VIDEO_RENDERER__
-#define __LOOPYMSE__VIDEO_RENDERER__
+#ifndef LOOPYMSE__VIDEO_RENDER
+#define LOOPYMSE__VIDEO_RENDER
 
 namespace Video::Renderer
 {
 
 void draw_scanline(int y);
-void draw_border_scanline(int y);
 
 }
 

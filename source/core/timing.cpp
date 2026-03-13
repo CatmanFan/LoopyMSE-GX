@@ -115,7 +115,7 @@ static void set_cur_timer(int id, int32_t slice)
 
 void initialize()
 {
-	state = {};
+	// state = {};
 
 	state.timers = std::vector<Timer>(NUM_TIMERS);
 }
@@ -207,7 +207,7 @@ void cancel_event(EventHandle& ev)
 void process_slice(int id, int32_t slice)
 {
 	set_cur_timer(id, slice);
-	if (state.cur_timer->func) { state.cur_timer->func(); }
+	state.cur_timer->func();
 	process_events();
 }
 

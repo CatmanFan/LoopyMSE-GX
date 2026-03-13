@@ -46,7 +46,7 @@ static uint32_t translate_addr(uint32_t addr)
 	if (addr >= Video::DMA_START && addr < Video::DMA_END) return Video::dma_##access(__VA_ARGS__);                   \
 	if (addr >= OCPM::IO_BASE_ADDR && addr < OCPM::IO_END_ADDR) return OCPM::io_##access(__VA_ARGS__);                \
 	if (addr >= Sound::CTRL_START && addr < Sound::CTRL_END) return Sound::ctrl_##access(__VA_ARGS__);                \
-	if (addr >= Expansion::MAPPED_START && addr < Expansion::MAPPED_END) return Expansion::exp_##access(__VA_ARGS__); \
+	/* if (addr >= Expansion::MAPPED_START && addr < Expansion::MAPPED_END) return Expansion::exp_##access(__VA_ARGS__); */ \
 	return unmapped_##access(__VA_ARGS__);
 
 uint8_t unmapped_read8(uint32_t addr)

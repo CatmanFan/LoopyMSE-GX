@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__INPUT__
-#define __LOOPYMSE__INPUT__
+#ifndef LOOPYMSE__INPUT
+#define LOOPYMSE__INPUT
 
 namespace Input
 {
@@ -22,24 +22,13 @@ enum PadButton
 	PAD_RIGHT = 0x0800
 };
 
-enum MouseButton
-{
-	MOUSE_L = 0x1000,
-	MOUSE_R = 0x4000
-};
-
 void initialize();
 void shutdown();
 
 void set_key_state(int key, bool pressed);
-void set_controller_state(int key, bool pressed);
-void set_mouse_button_state(int button, bool pressed);
-void move_mouse(int delta_x, int delta_y);
 
 void add_key_binding(int key, PadButton pad_button);
-void add_controller_binding(int key, PadButton pad_button);
-void add_mouse_binding(int code, MouseButton mouse_button);
 
-}  // namespace Input
+}
 
 #endif

@@ -25,8 +25,6 @@ Features still TODO:
 
 ## Builds
 
-Check the [Releases page](../../releases) to get LoopyMSE for Linux, Windows, MacOS Intel, MacOS ARM64.
-
 Rolling builds are available for every commit on [Github Actions](../../actions/).
 
 ## Usage

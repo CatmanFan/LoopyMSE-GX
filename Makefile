@@ -20,7 +20,6 @@ BUILD		:=	build
 SOURCES		:=	source \
 				source/common \
 				source/core source/core/sh2 source/core/sh2/peripherals \
-				source/expansion source/expansion/msm665x \
 				source/input \
 				source/sound \
 				source/video
@@ -28,7 +27,6 @@ DATA		:=
 INCLUDES	:=	include \
 				include/common \
 				include/core include/core/sh2 include/core/sh2/peripherals \
-				include/expansion include/expansion/msm665x \
 				include/input \
 				include/sound \
 				include/video
@@ -37,7 +35,7 @@ INCLUDES	:=	include \
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS	= `$(PREFIX)pkg-config --cflags sdl2 SDL2_mixer SDL2_image` -g -O2 -Wall $(MACHDEP) $(INCLUDE) -DWII -DCONSOLE
+CFLAGS	= `$(PREFIX)pkg-config --cflags sdl2 SDL2_mixer SDL2_image` -g -O2 -Wall $(MACHDEP) $(INCLUDE) -D_WII
 CXXFLAGS	=	$(CFLAGS)
 
 LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map

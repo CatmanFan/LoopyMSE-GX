@@ -15,11 +15,10 @@ Game support notes:
 - Wanwan has no PCM sample support, and seems to crackle on dialog sfx (same timing issue?)
 */
 
-#ifndef __LOOPYMSE__SOUND__
-#define __LOOPYMSE__SOUND__
+#ifndef LOOPYMSE__SOUND
+#define LOOPYMSE__SOUND
 
 #include <cstdint>
-#include <string>
 #include <vector>
 
 namespace Sound
@@ -33,14 +32,14 @@ constexpr static int TARGET_SAMPLE_RATE = 48000;
 constexpr static int TARGET_BUFFER_SIZE = 2048;
 
 // Time reference to smooth out audio timing at larger buffer sizes. Assumes consistent CPU timing.
-// Ideally should be a multiple of the video framerate for frame-dependent sound events to sync well.
-constexpr static int TIMEREF_FREQUENCY = 240;
+constexpr static int TIMEREF_FREQUENCY = 100;
 constexpr static bool TIMEREF_ENABLE = TIMEREF_FREQUENCY > (TARGET_SAMPLE_RATE / TARGET_BUFFER_SIZE);
 
 // Fade up/down time in milliseconds when sound is muted e.g. by minimizing the window.
 constexpr static int MUTE_FADE_MS = 20;
 
 // Audio synthesis parameters in loopysound.h.
+
 
 void initialize(std::vector<uint8_t>& sound_rom);
 void shutdown();
@@ -58,9 +57,6 @@ void ctrl_write32(uint32_t addr, uint32_t value);
 void midi_byte_in(uint8_t value);
 void set_mute(bool mute_in);
 
-void wav_queue(std::string path, float volume);
-void wav_stop();
-
-}  // namespace Sound
+}
 
 #endif

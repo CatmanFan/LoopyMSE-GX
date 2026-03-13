@@ -1,5 +1,5 @@
-#ifndef __LOOPYMSE__VIDEO_VDP__
-#define __LOOPYMSE__VIDEO_VDP__
+#ifndef LOOPYMSE__VIDEO_VDP
+#define LOOPYMSE__VIDEO_VDP
 
 #include <memory>
 #include "video/video.h"
