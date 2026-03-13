@@ -207,7 +207,7 @@ static void dump_serial_region(std::ofstream& dump, uint8_t* mem, uint32_t addr,
 
 void initialize()
 {
-	// vdp = {};
+	// vdp = {}; // /!\ ISI EXCEPTION /!\ //
 
 	vdp.visible_scanlines = 0xE0;
 
@@ -254,7 +254,7 @@ void start_frame()
 {
 	vdp.frame_ended = false;
 
-	constexpr static int BUFFER_SIZE = DISPLAY_WIDTH * DISPLAY_HEIGHT;
+	constexpr static int BUFFER_SIZE = DISPLAY_WIDTH * DISPLAY_HEIGHT * sizeof(uint16_t);
 
 	//Clear the output buffers
 	for (int i = 0; i < 2; i++)
@@ -962,8 +962,7 @@ void dma_ctrl_write32(uint32_t addr, uint32_t value)
 
 uint8_t dma_read8(uint32_t addr)
 {
-	// assert(0);
-	return 0;
+	READ_HALFWORD(dma, addr);
 }
 
 uint16_t dma_read16(uint32_t addr)
@@ -974,8 +973,7 @@ uint16_t dma_read16(uint32_t addr)
 
 uint32_t dma_read32(uint32_t addr)
 {
-	// assert(0);
-	return 0;
+	READ_DOUBLEWORD(dma, addr);
 }
 
 void dma_write8(uint32_t addr, uint8_t value)

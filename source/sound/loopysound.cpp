@@ -46,13 +46,13 @@ UPD937_Core::UPD937_Core(std::vector<uint8_t>& rom_in, float synthesis_rate)
 	// Setup voice state
 	for(int v = 0; v < 32; v++)
 	{
-		// voices[v] = {};
+		voices[v] = {};
 	}
 
 	// Setup channel state
 	for(int c = 0; c < 4; c++)
 	{
-		// channels[c] = {};
+		channels[c] = {};
 		prog_chg(c, 0);
 	}
 	set_channel_configuration(false, false);

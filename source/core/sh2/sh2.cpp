@@ -84,12 +84,12 @@ static bool handle_exception()
 
 void initialize()
 {
-	// sh2 = {};
+	sh2 = {};
 
 	sh2.pagetable = Memory::get_sh2_pagetable();
 
 	//TODO: make config option to skip BIOS boot?
-	bool skip_bios_boot = true;
+	bool skip_bios_boot = false;
 	if (skip_bios_boot)
 	{
 		set_pc(0x0E000480);

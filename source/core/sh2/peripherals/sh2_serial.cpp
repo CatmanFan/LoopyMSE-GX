@@ -144,7 +144,7 @@ static void tx_event(uint64_t param, int cycles_late)
 
 void initialize()
 {
-	// state = {};
+	state = {};
 
 	tx_ev_func = Timing::register_func("Serial::tx_event", tx_event);
 
@@ -265,7 +265,7 @@ void write8(uint32_t addr, uint8_t value)
 		break;
 	}
 	default:
-		// assert(0);
+		assert(0);
 		break;
 	}
 }

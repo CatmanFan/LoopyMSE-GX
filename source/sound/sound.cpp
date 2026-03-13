@@ -132,8 +132,7 @@ void shutdown()
 
 uint8_t ctrl_read8(uint32_t addr)
 {
-	assert(0);
-	return 0;
+	READ_HALFWORD(ctrl, addr);
 }
 
 uint16_t ctrl_read16(uint32_t addr)
@@ -144,13 +143,12 @@ uint16_t ctrl_read16(uint32_t addr)
 
 uint32_t ctrl_read32(uint32_t addr)
 {
-	assert(0);
-	return 0;
+	READ_DOUBLEWORD(ctrl, addr);
 }
 
 void ctrl_write8(uint32_t addr, uint8_t value)
 {
-	// assert(0);
+	WRITE_HALFWORD(ctrl, addr, value);
 }
 
 void ctrl_write16(uint32_t addr, uint16_t value)

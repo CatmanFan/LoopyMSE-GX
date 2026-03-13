@@ -16,7 +16,7 @@ static State state;
 
 void initialize()
 {
-	// state = {};
+	state.pad_buttons = 0;
 }
 
 void shutdown()

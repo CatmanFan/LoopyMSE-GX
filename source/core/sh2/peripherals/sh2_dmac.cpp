@@ -171,7 +171,7 @@ uint16_t read16(uint32_t addr)
 	case 0x0E:
 		return chan->get_ctrl();
 	default:
-		// assert(0);
+		assert(0);
 		return 0;
 	}
 }
@@ -202,7 +202,7 @@ void write16(uint32_t addr, uint16_t value)
 		check_activations();
 		break;
 	default:
-		// assert(0);
+		assert(0);
 		break;
 	}
 }
@@ -222,14 +222,14 @@ void write32(uint32_t addr, uint32_t value)
 		chan->dst_addr = value;
 		break;
 	default:
-		// assert(0);
+		assert(0);
 		break;
 	}
 }
 
 void initialize()
 {
-	// state = {};
+	state = {};
 	in_dma_state = false;
 
 	//Auto mode should always go through

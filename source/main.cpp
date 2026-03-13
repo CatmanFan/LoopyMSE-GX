@@ -47,22 +47,35 @@ namespace SDL
 
 	bool initialize()
 	{
-		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) < 0)
+		if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		{
 			printf("SDL2 error: %s\n", SDL_GetError());
 			return false;
 		}
 
 		//Try synchronizing drawing to VBLANK
-		SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+		// SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 		SDL_ShowCursor(SDL_DISABLE);
 
-		//Set up SDL screen
-		SDL_CreateWindowAndRenderer(2 * FRAME_WIDTH, 2 * FRAME_HEIGHT, 0, &screen.window, &screen.renderer);
-		SDL_SetWindowTitle(screen.window, "Rupi");
-		SDL_SetWindowSize(screen.window, 2 * FRAME_WIDTH, 2 * FRAME_HEIGHT);
-		SDL_SetWindowResizable(screen.window, SDL_FALSE);
-		SDL_RenderSetLogicalSize(screen.renderer, 2 * FRAME_WIDTH, 2 * FRAME_HEIGHT);
+		// Window
+		SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_FULLSCREEN);
+		screen.window = SDL_CreateWindow("Rupi", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, FRAME_WIDTH, FRAME_HEIGHT, window_flags);
+		if (!screen.window)
+		{
+			printf("SDL2 win error: %s\n", SDL_GetError());
+			return false;
+		}
+
+		// Renderer
+		screen.renderer = SDL_CreateRenderer(screen.window, -1, SDL_RENDERER_PRESENTVSYNC); // SDL_RENDERER_ACCELERATED
+		if (!screen.renderer)
+		{
+			printf("SDL2 ren error: %s\n", SDL_GetError());
+			return false;
+		}
+
+		// Set logical size for resolution independence
+		SDL_RenderSetLogicalSize(screen.renderer, FRAME_WIDTH, FRAME_HEIGHT);
 
 		screen.texture = SDL_CreateTexture(screen.renderer, SDL_PIXELFORMAT_ARGB1555, SDL_TEXTUREACCESS_STREAMING, DISPLAY_WIDTH, DISPLAY_HEIGHT);
 		return true;
@@ -73,6 +86,7 @@ namespace SDL
 		SDL_DestroyTexture(screen.texture);
 		SDL_DestroyRenderer(screen.renderer);
 		SDL_DestroyWindow(screen.window);
+		VIDEO_SetBlack(true);
 
 		SDL_Quit();
 	}
@@ -89,12 +103,13 @@ namespace SDL
 		}
 
 		// Clear screen
-		SDL_SetRenderDrawColor(screen.renderer, 0, 0, 255, 255);
+		SDL_SetRenderDrawColor(screen.renderer, 32, 32, 32, 255);
 		SDL_RenderClear(screen.renderer);
 
 		// Draw screen
+		SDL_Rect dest = {FRAME_WIDTH / 2 - (DISPLAY_WIDTH / 2), FRAME_HEIGHT / 2 - (DISPLAY_HEIGHT / 2), DISPLAY_WIDTH, DISPLAY_HEIGHT};
 		// SDL_UpdateTexture(screen.texture, NULL, display_output, sizeof(uint16_t) * DISPLAY_WIDTH);
-		SDL_RenderCopy(screen.renderer, screen.texture, NULL, NULL);
+		SDL_RenderCopy(screen.renderer, screen.texture, NULL, &dest);
 		SDL_RenderPresent(screen.renderer);
 	}
 }
@@ -260,10 +275,14 @@ int main(int argc, char **argv) {
 	//If a file was loaded but was smaller than the SRAM size, the uninitialized bytes will be 0xFF.
 	//If the file was larger, then the vector size is clamped
 	// printf("Resizing SRAM\n");
-	// config.cart.sram.resize(sram_size, 0xFF);
+	// config.cart.sram.resize(sram_size, 0xFF); /* apparently freezes on Dolphin? */
+
+	printf("Warning: Emulation is experimental and currently does not output video/sound!\n");
+	printf("         Continuing in 5 seconds\n");
+	sleep(5);
 
 	//Initialize the emulator and all of its subprojects
-	printf("Starting virtual machine\n");
+	printf("Starting\n");
 	System::initialize(config);
 	Sound::set_mute(false);
 
@@ -283,7 +302,6 @@ int main(int argc, char **argv) {
 	Input::add_key_binding(SDLK_UP, Input::PAD_UP);
 	Input::add_key_binding(SDLK_DOWN, Input::PAD_DOWN);
 
-	printf("Switching to SDL\n");
 	if (!SDL::initialize())
 		fatal("failed to init SDL");
 
@@ -320,7 +338,6 @@ int main(int argc, char **argv) {
 	}
 
 	System::shutdown();
-	VIDEO_SetBlack(true);
 	SDL::shutdown();
 
 	// fatUnmount(0);

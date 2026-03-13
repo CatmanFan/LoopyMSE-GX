@@ -115,7 +115,7 @@ static void set_cur_timer(int id, int32_t slice)
 
 void initialize()
 {
-	// state = {};
+	state = {};
 
 	state.timers = std::vector<Timer>(NUM_TIMERS);
 }

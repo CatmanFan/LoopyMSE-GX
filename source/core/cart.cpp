@@ -23,8 +23,6 @@ static void commit_sram()
 
 void initialize(Config::CartInfo& info)
 {
-	// state = {};
-
 	state.rom = info.rom;
 	state.sram = info.sram;
 	state.sram_file_path = info.sram_file_path;

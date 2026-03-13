@@ -38,7 +38,7 @@ static void send_irq_signal()
 
 void initialize()
 {
-	// state = {};
+	state = {};
 
 	//NMI and UserBreak have fixed priorities, everything else is configurable
 	state.prios[(int)IRQ::NMI] = 16;
@@ -125,7 +125,7 @@ uint16_t read16(uint32_t addr)
 		return result;
 	}
 	default:
-		// assert(0);
+		assert(0);
 		return 0;
 	}
 }
@@ -187,7 +187,7 @@ void write16(uint32_t addr, uint16_t value)
 		state.prios[(int)IRQ::WDT] = state.prios[(int)IRQ::REF] = (value >> 4) & 0x0F;
 		break;
 	default:
-		// assert(0);
+		assert(0);
 		break;
 	}
 }

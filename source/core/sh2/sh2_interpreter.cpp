@@ -64,7 +64,7 @@ static uint32_t get_control_reg(int index)
 	case 2:
 		return sh2.vbr;
 	default:
-		// assert(0);
+		// assert(0); // /!\ QUITS APP /!\ //
 		return 0;
 	}
 }
@@ -84,7 +84,7 @@ static void set_control_reg(int index, uint32_t value)
 		sh2.vbr = value;
 		break;
 	default:
-		// assert(0);
+		assert(0);
 		break;
 	}
 }
@@ -101,7 +101,7 @@ static uint32_t get_system_reg(int index)
 	case 2:
 		return sh2.pr;
 	default:
-		// assert(0);
+		// assert(0); // /!\ QUITS APP /!\ //
 		return 0;
 	}
 }
@@ -121,7 +121,7 @@ static void set_system_reg(int index, uint32_t value)
 		sh2.pr = value;
 		break;
 	default:
-		// assert(0);
+		assert(0);
 		break;
 	}
 }
@@ -1608,7 +1608,7 @@ void run(uint16_t instr, uint32_t src_addr)
 	else
 	{
 		// printf("[SH2] unrecognized instr %04X at %08X\n", instr, src_addr);
-		// assert(0);
+		// assert(0); // /!\ QUITS APP /!\ //
 	}
 }
 

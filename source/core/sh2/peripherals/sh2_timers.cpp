@@ -216,8 +216,8 @@ static TimerDev get_dev_from_addr(uint32_t addr)
 
 void initialize()
 {
-	// state = {};
-	// ev_func = {};
+	state = {};
+	ev_func = {};
 
 	for (int i = 0; i < TIMER_COUNT; i++)
 	{
@@ -247,7 +247,7 @@ uint8_t read8(uint32_t addr)
 		case 0x03:
 			return timer->intr_flag | 0x78;
 		default:
-			// assert(0);
+			assert(0);
 			return 0;
 		}
 	}
@@ -261,14 +261,14 @@ uint8_t read8(uint32_t addr)
 	case 0x02:
 		return state.mode;
 	default:
-		// assert(0);
+		assert(0);
 		return 0;
 	}
 }
 
 uint16_t read16(uint32_t addr)
 {
-	// assert(0);
+	assert(0);
 	return 0;
 }
 
@@ -322,7 +322,7 @@ void write8(uint32_t addr, uint8_t value)
 			update_timer_target(timer);
 			break;
 		default:
-			// assert(0);
+			assert(0);
 			break;
 		}
 
@@ -351,7 +351,7 @@ void write8(uint32_t addr, uint8_t value)
 		assert(!state.mode);
 		break;
 	default:
-		// assert(0);
+		assert(0);
 		break;
 	}
 }
@@ -381,7 +381,7 @@ void write16(uint32_t addr, uint16_t value)
 			update_timer_target(timer);
 			break;
 		default:
-			// assert(0);
+			assert(0);
 			break;
 		}
 
@@ -391,7 +391,7 @@ void write16(uint32_t addr, uint16_t value)
 	switch (reg)
 	{
 	default:
-		// assert(0);
+		assert(0);
 		break;
 	}
 }
