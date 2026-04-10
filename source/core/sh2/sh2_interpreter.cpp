@@ -1593,7 +1593,7 @@ void run(uint16_t instr, uint32_t src_addr)
 	}
 	else
 	{
-		// printf("[SH2] unrecognized instr %04X at %08X\n", instr, src_addr);
+		//printf("[SH2] unrecognized instr %04X at %08X\n", instr, src_addr);
 	}
 }
 

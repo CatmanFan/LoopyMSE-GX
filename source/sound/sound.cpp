@@ -154,7 +154,7 @@ void ctrl_write8(uint32_t addr, uint8_t value)
 void ctrl_write16(uint32_t addr, uint16_t value)
 {
 	value &= 0xFFF;
-	// printf("[Sound] Control register %03X\n", value);
+	//printf("[Sound] Control register %03X\n", value);
 	//fflush(stdout);
 	if (sound_engine)
 	{
@@ -169,7 +169,7 @@ void ctrl_write32(uint32_t addr, uint32_t value)
 
 void midi_byte_in(uint8_t value)
 {
-	// printf("[Sound] MIDI byte %02X\n", value);
+	//printf("[Sound] MIDI byte %02X\n", value);
 	//fflush(stdout);
 	if (sound_engine)
 	{

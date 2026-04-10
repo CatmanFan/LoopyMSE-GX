@@ -85,7 +85,7 @@ void initialize()
 	sh2.pagetable = Memory::get_sh2_pagetable();
 
 	//TODO: make config option to skip BIOS boot?
-	bool skip_bios_boot = true;
+	bool skip_bios_boot = false;
 	if (skip_bios_boot)
 	{
 		set_pc(0x0E000480);
@@ -94,12 +94,12 @@ void initialize()
 	else
 	{
 		//The initial values of PC and SP are read from the vector table
-		int boot_type = 0;
+		int boot_type = 1;
 		uint8_t* boot_vectors = sh2.pagetable[0];
 		uint32_t reset_pc, reset_sp;
 		memcpy(&reset_pc, boot_vectors + boot_type*8 + 0, 4);
 		memcpy(&reset_sp, boot_vectors + boot_type*8 + 4, 4);
-		set_pc(Common::bswp32(reset_pc));
+		set_pc(Common::bswp32(reset_pc + 0x0E000000));
 		sh2.gpr[15] = Common::bswp32(reset_sp);
 	}
 

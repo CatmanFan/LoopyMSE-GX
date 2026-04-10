@@ -78,7 +78,7 @@ uint16_t io_read16(uint32_t addr)
 	switch (addr)
 	{
 	default:
-		printf("[OCPM] read16 %08X\n", addr);
+		//printf("[OCPM] read16 %08X\n", addr);
 		return 0;
 	}
 }
@@ -146,7 +146,7 @@ void io_write16(uint32_t addr, uint16_t value)
 		//Prevent log spam for WDT_TCSR
 		break;
 	default:
-		printf("[OCPM] write16 %08X: %04X\n", addr, value);
+		//printf("[OCPM] write16 %08X: %04X\n", addr, value);
 		break;
 	}
 }

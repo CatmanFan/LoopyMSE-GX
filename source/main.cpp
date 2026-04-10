@@ -52,11 +52,12 @@ namespace SDL
 		}
 
 		//Try synchronizing drawing to VBLANK
-		SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+		// SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+		SDL_SetHint("SDL_JOYSTICK_HIDAPI_WII", "1");
  
 		// make sure SDL cleans up before exit
 		atexit(SDL_Quit);
-		SDL_ShowCursor(SDL_DISABLE);
+		// SDL_ShowCursor(SDL_DISABLE);
 
 		// create a new window
 		screen.window = SDL_CreateWindow(
@@ -182,8 +183,8 @@ static void CreateAppPath(std::string file_path)
 static void PrintHeader()
 {
     printf("\033[2J\033[H"); // Clear screen
-	printf("LoopyMSE-Wii v0.1\n");
-	printf("-----------------------------------------------------------------------------\n");
+	printf("LoopyMSE-GX v0.1                                Casio Loopy emulator for Wii\n");
+	printf("____________________________________________________________________________\n\n");
 }
 
 //---------------------------------------------------------------------------------
@@ -214,6 +215,7 @@ int main(int argc, char **argv) {
 	// Wait for Video setup to complete
 	VIDEO_WaitVSync();
 	if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
+	VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_BLACK);
 
 	PrintHeader();
 	printf("Loading\n");
@@ -244,7 +246,7 @@ int main(int argc, char **argv) {
 	std::ifstream sound_rom_file(sound_rom_name, std::ios::binary);
 	if (!sound_rom_file.is_open())
 	{
-		printf("Warning: soundbios.bin not found");
+		printf("Warning: soundbios.bin not found.\n         Emulator will continue without sound.");
 		sleep(3);
 	}
 	config.sound_rom.assign(std::istreambuf_iterator<char>(sound_rom_file), {});
@@ -348,20 +350,20 @@ int main(int argc, char **argv) {
 		Sound::set_mute(false);
 
 		//All subprojects have been initialized, so it is safe to reference them now
-		Input::add_key_binding(SDLK_RETURN, Input::PAD_START);
+		Input::add_key_binding(SDL_CONTROLLER_BUTTON_START, Input::PAD_START);
 
-		Input::add_key_binding(SDLK_z, Input::PAD_A);
-		Input::add_key_binding(SDLK_x, Input::PAD_B);
-		Input::add_key_binding(SDLK_a, Input::PAD_C);
-		Input::add_key_binding(SDLK_s, Input::PAD_D);
+		Input::add_key_binding(SDL_CONTROLLER_BUTTON_A, Input::PAD_A);
+		Input::add_key_binding(SDL_CONTROLLER_BUTTON_B, Input::PAD_B);
+		Input::add_key_binding(SDL_CONTROLLER_BUTTON_X, Input::PAD_C);
+		Input::add_key_binding(SDL_CONTROLLER_BUTTON_Y, Input::PAD_D);
 
-		Input::add_key_binding(SDLK_q, Input::PAD_L1);
-		Input::add_key_binding(SDLK_w, Input::PAD_R1);
+		Input::add_key_binding(SDL_CONTROLLER_BUTTON_LEFTSHOULDER, Input::PAD_L1);
+		Input::add_key_binding(SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, Input::PAD_R1);
 
-		Input::add_key_binding(SDLK_LEFT, Input::PAD_LEFT);
-		Input::add_key_binding(SDLK_RIGHT, Input::PAD_RIGHT);
-		Input::add_key_binding(SDLK_UP, Input::PAD_UP);
-		Input::add_key_binding(SDLK_DOWN, Input::PAD_DOWN);
+		Input::add_key_binding(SDL_HAT_LEFT, Input::PAD_LEFT);
+		Input::add_key_binding(SDL_HAT_LEFT, Input::PAD_RIGHT);
+		Input::add_key_binding(SDL_HAT_UP, Input::PAD_UP);
+		Input::add_key_binding(SDL_HAT_DOWN, Input::PAD_DOWN);
 
 		if (!SDL::initialize())
 			fatal("failed to init SDL");
@@ -379,30 +381,6 @@ int main(int argc, char **argv) {
 			System::run();
 			SDL::update(System::get_display_output());
 
-			/* Warning: SRAM not found
-			[Sound] Using audio device (null)
-			[Sound] Init uPD937 core: synth rate 84864.0, out rate 48000.0, buffer size 2048
-			[Sound] Init filters
-			[Sound] Schedule timeref 100 Hz
-			[Video] write MODE: 0012
-			[Video] write DISPMODE: 0000
-			[Video] write BM_CTRL: 0001
-			[Video] write COLORPRIO: 0040
-			[Video] write LAYER_CTRL: AA46
-			[Video] write OBJ_CTRL: 0100
-			[Video] write BG_CTRL: 000F
-			[Video] write BM0_SCREENX: 0000
-			[Video] write BM0_SCREENY: 0000
-			[Video] write BM0_SCROLLY: 0000
-			[Video] write BM0_CLIPWIDTH: 00FF
-			[Video] write BM0_HEIGHT: 01FF
-			[Video] VSYNC start
-			[Sound] Unmuted output
-			[Video] VSYNC end
-			[Video] VSYNC start
-			[Video] VSYNC end
-			[Video] VSYNC start */
-
 			SDL_Event e;
 			while (SDL_PollEvent(&e))
 			{
@@ -411,10 +389,10 @@ int main(int argc, char **argv) {
 				// case SDL_QUIT:
 					// has_quit = true;
 					// break;
-				case SDL_KEYDOWN:
+				case SDL_CONTROLLERBUTTONDOWN:
 					Input::set_key_state(e.key.keysym.sym, true);
 					break;
-				case SDL_KEYUP:
+				case SDL_CONTROLLERBUTTONUP:
 					Input::set_key_state(e.key.keysym.sym, false);
 					break;
 				}

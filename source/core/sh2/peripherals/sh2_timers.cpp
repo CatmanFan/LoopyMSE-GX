@@ -277,7 +277,7 @@ void write8(uint32_t addr, uint8_t value)
 		switch (reg)
 		{
 		case 0x00:
-			printf("[Timer] write timer%d ctrl: %02X\n", timer->id, value);
+			//printf("[Timer] write timer%d ctrl: %02X\n", timer->id, value);
 			timer->update_counter();
 			timer->ctrl.clock = value & 0x7;
 			timer->ctrl.edge_mode = (value >> 3) & 0x3;
@@ -285,22 +285,22 @@ void write8(uint32_t addr, uint8_t value)
 			update_timer_target(timer);
 			break;
 		case 0x01:
-			printf("[Timer] write timer%d io ctrl: %02X\n", timer->id, value);
+			//printf("[Timer] write timer%d io ctrl: %02X\n", timer->id, value);
 			//assert(!value);
 			//For now timer IO just does nothing
 			break;
 		case 0x02:
-			printf("[Timer] write timer%d intr enable: %02X\n", timer->id, value);
+			//printf("[Timer] write timer%d intr enable: %02X\n", timer->id, value);
 			timer->intr_enable = value;
 			update_timer_irq(timer);
 			break;
 		case 0x03:
-			printf("[Timer] write timer%d intr flag: %02X\n", timer->id, value);
+			//printf("[Timer] write timer%d intr flag: %02X\n", timer->id, value);
 			timer->intr_flag &= value;
 			update_timer_irq(timer);
 			break;
 		case 0x04:
-			printf("[Timer] write timer%d counter: %02X**\n", timer->id, value);
+			//printf("[Timer] write timer%d counter: %02X**\n", timer->id, value);
 			//The BIOS writes 0 to here under the assumption that it resets the whole counter...
 			timer->update_counter();
 			timer->counter &= 0x00FF;
@@ -308,7 +308,7 @@ void write8(uint32_t addr, uint8_t value)
 			update_timer_target(timer);
 			break;
 		case 0x05:
-			printf("[Timer] write timer%d counter: **%02X\n", timer->id, value);
+			//printf("[Timer] write timer%d counter: **%02X\n", timer->id, value);
 			timer->update_counter();
 			timer->counter &= 0xFF00;
 			timer->counter |= value;
@@ -324,7 +324,7 @@ void write8(uint32_t addr, uint8_t value)
 	switch (reg)
 	{
 	case 0x00:
-		printf("[Timer] write master enable: %02X\n", value);
+		//printf("[Timer] write master enable: %02X\n", value);
 		state.timer_enable = value & 0x1F;
 
 		for (int i = 0; i < TIMER_COUNT; i++)
@@ -333,12 +333,12 @@ void write8(uint32_t addr, uint8_t value)
 		}
 		break;
 	case 0x01:
-		printf("[Timer] write sync ctrl: %02X\n", value);
+		//printf("[Timer] write sync ctrl: %02X\n", value);
 		state.sync_ctrl = value & 0x1F;
 		assert(!state.sync_ctrl);
 		break;
 	case 0x02:
-		printf("[Timer] write mode: %02X\n", value);
+		//printf("[Timer] write mode: %02X\n", value);
 		state.mode = value & 0x7F;
 		assert(!state.mode);
 		break;
@@ -359,14 +359,14 @@ void write16(uint32_t addr, uint16_t value)
 		switch (reg)
 		{
 		case 0x04:
-			printf("[Timer] write timer%d counter: %04X\n", timer->id, value);
+			//printf("[Timer] write timer%d counter: %04X\n", timer->id, value);
 			timer->counter = value;
 			update_timer_target(timer);
 			break;
 		case 0x06:
 		case 0x08:
 			reg = (reg - 0x06) >> 1;
-			printf("[Timer] write timer%d general reg%d: %04X\n", timer->id, reg, value);
+			//printf("[Timer] write timer%d general reg%d: %04X\n", timer->id, reg, value);
 			timer->update_counter();
 			timer->gen_reg[reg] = value;
 			update_timer_target(timer);

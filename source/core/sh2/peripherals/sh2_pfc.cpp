@@ -54,7 +54,7 @@ uint16_t read16(uint32_t addr)
 		gpio_port = (addr >> 1) & 1;
 		return gpio.direction[gpio_port];
 	default:
-		// Log::warn("[PFC] unmapped read %08X", addr);
+		//printf("[PFC] unmapped read %08X", addr);
 		return 0;
 	}
 }
@@ -71,26 +71,26 @@ void write16(uint32_t addr, uint16_t value)
 	case 0x02:
 		gpio_port = (addr >> 1) & 1;
 		gpio.output[gpio_port] = value;
-		// printf("[PFC] GPIO write P%sDR: %04X", gpio_port ? "B" : "A", value);
+		//printf("[PFC] GPIO write P%sDR: %04X", gpio_port ? "B" : "A", value);
 		break;
 	case 0x04:
 	case 0x06:
 		gpio_port = (addr >> 1) & 1;
 		gpio.direction[gpio_port] = value;
-		// printf("[PFC] GPIO write P%sIOR: %04X", gpio_port ? "B" : "A", value);
+		//printf("[PFC] GPIO write P%sIOR: %04X", gpio_port ? "B" : "A", value);
 		break;
 	case 0x08:
 	case 0x0C:
 		gpio_port = (addr >> 2) & 1;
-		// printf("[PFC] GPIO write P%sCR1: %04X", gpio_port ? "B" : "A", value);
+		//printf("[PFC] GPIO write P%sCR1: %04X", gpio_port ? "B" : "A", value);
 		break;
 	case 0x0A:
 	case 0x0E:
 		gpio_port = (addr >> 2) & 1;
-		// printf("[PFC] GPIO write P%sCR2: %04X", gpio_port ? "B" : "A", value);
+		//printf("[PFC] GPIO write P%sCR2: %04X", gpio_port ? "B" : "A", value);
 		break;
 	default:
-		// Log::warn("[PFC] unmapped write %08X: %04X", addr, value);
+		//printf("[PFC] unmapped write %08X: %04X", addr, value);
 		break;
 	}
 }

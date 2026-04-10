@@ -115,7 +115,7 @@ static void tx_event(uint64_t param, int cycles_late)
 
 	if (!port->tx_bits_left)
 	{
-		printf("[Serial] port%d tx %02X\n", port->id, port->tx_prepared_data);
+		//printf("[Serial] port%d tx %02X\n", port->id, port->tx_prepared_data);
 
 		if (port->tx_callback != nullptr) {
 			port->tx_callback(port->tx_prepared_data);
@@ -129,7 +129,7 @@ static void tx_event(uint64_t param, int cycles_late)
 		else
 		{
 			//TODO: can this trigger an interrupt?
-			printf("[Serial] port%d finished tx\n", port->id);
+			//printf("[Serial] port%d finished tx\n", port->id);
 		}
 	}
 	else
@@ -171,7 +171,7 @@ uint8_t read8(uint32_t addr)
 		value = port->status.tx_empty << 7;
 		break;
 	default:
-		printf("[Serial] read port%d reg%d: %02X", port->id, reg, value);
+		//printf("[Serial] read port%d reg%d: %02X", port->id, reg, value);
 		break;
 	}
 	return value;
@@ -186,7 +186,7 @@ void write8(uint32_t addr, uint8_t value)
 	switch (reg)
 	{
 	case 0x00:
-		printf("[Serial] write port%d mode: %02X\n", port->id, value);
+		//printf("[Serial] write port%d mode: %02X\n", port->id, value);
 		port->mode.clock_factor = value & 0x3;
 		port->mode.mp_enable = (value >> 2) & 0x1;
 		port->mode.stop_bit_length = (value >> 3) & 0x1;
@@ -197,13 +197,13 @@ void write8(uint32_t addr, uint8_t value)
 		assert(!(value & ~0x3));
 		break;
 	case 0x01:
-		printf("[Serial] write port%d bitrate factor: %02X\n", port->id, value);
+		//printf("[Serial] write port%d bitrate factor: %02X\n", port->id, value);
 		port->bit_factor = value;
 		port->calc_cycles_per_bit();
-		printf("[Serial] set port%d baudrate: %d bit/s\n", port->id, Timing::F_CPU / port->cycles_per_bit);
+		//printf("[Serial] set port%d baudrate: %d bit/s\n", port->id, Timing::F_CPU / port->cycles_per_bit);
 		break;
 	case 0x02:
-		printf("[Serial] write port%d ctrl: %02X\n", port->id, value);
+		//printf("[Serial] write port%d ctrl: %02X\n", port->id, value);
 		port->ctrl.clock_mode = value & 0x3;
 		port->ctrl.tx_end_intr_enable = (value >> 2) & 0x1;
 		port->ctrl.mp_intr_enable = (value >> 3) & 0x1;
@@ -220,7 +220,7 @@ void write8(uint32_t addr, uint8_t value)
 		check_tx_dreqs();
 		break;
 	case 0x03:
-		printf("[Serial] write port%d data: %02X", port->id, value);
+		//printf("[Serial] write port%d data: %02X", port->id, value);
 		port->tx_buffer = value;
 
 		if (!(port->status.tx_empty && port->ctrl.tx_enable))
@@ -247,7 +247,7 @@ void write8(uint32_t addr, uint8_t value)
 	case 0x04:
 	{
 		//TODO implement other status bits
-		printf("[Serial] write port%d status: %02X", port->id, value);
+		//printf("[Serial] write port%d status: %02X", port->id, value);
 		bool new_empty = (value >> 7) & 0x1;
 		if(port->status.tx_empty && !new_empty)
 		{
