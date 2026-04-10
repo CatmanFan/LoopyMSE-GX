@@ -1,15 +1,11 @@
-#include "core/sh2/peripherals/sh2_ocpm.h"
-
-#include "common/wordops.h"
-#include "common/bswp.h"
-// #include "log/log.h"
-
 #include <cstdio>
 #include <cstring>
-
+#include "common/bswp.h"
+#include "common/wordops.h"
 #include "core/sh2/peripherals/sh2_dmac.h"
 #include "core/sh2/peripherals/sh2_intc.h"
 #include "core/sh2/peripherals/sh2_pfc.h"
+#include "core/sh2/peripherals/sh2_ocpm.h"
 #include "core/sh2/peripherals/sh2_serial.h"
 #include "core/sh2/peripherals/sh2_timers.h"
 
@@ -82,7 +78,7 @@ uint16_t io_read16(uint32_t addr)
 	switch (addr)
 	{
 	default:
-		// Log::warn("[OCPM] unmapped read %08X", addr);
+		printf("[OCPM] read16 %08X\n", addr);
 		return 0;
 	}
 }
@@ -95,19 +91,19 @@ uint32_t io_read32(uint32_t addr)
 void io_write8(uint32_t addr, uint8_t value)
 {
 	addr = (addr & 0x1FF) + 0xE00;
-	
+
 	if (addr >= SERIAL_START && addr < SERIAL_END)
 	{
 		Serial::write8(addr, value);
 		return;
 	}
-	
+
 	if (addr >= TIMER_START && addr < TIMER_END)
 	{
 		Timer::write8(addr, value);
 		return;
 	}
-	
+
 	if (addr >= INTC_START && addr < INTC_END)
 	{
 		INTC::write8(addr, value);
@@ -148,10 +144,10 @@ void io_write16(uint32_t addr, uint16_t value)
 	{
 	case 0xFB8:
 		//Prevent log spam for WDT_TCSR
-		return;
+		break;
 	default:
-		// Log::warn("[OCPM] unmapped write %08X: %04X", addr, value);
-		return;
+		printf("[OCPM] write16 %08X: %04X\n", addr, value);
+		break;
 	}
 }
 

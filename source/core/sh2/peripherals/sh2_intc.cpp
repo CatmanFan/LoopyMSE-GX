@@ -1,4 +1,3 @@
-#include <cassert>
 #include "core/sh2/peripherals/sh2_intc.h"
 #include "core/sh2/sh2_local.h"
 
@@ -125,7 +124,6 @@ uint16_t read16(uint32_t addr)
 		return result;
 	}
 	default:
-		assert(0);
 		return 0;
 	}
 }
@@ -187,7 +185,6 @@ void write16(uint32_t addr, uint16_t value)
 		state.prios[(int)IRQ::WDT] = state.prios[(int)IRQ::REF] = (value >> 4) & 0x0F;
 		break;
 	default:
-		assert(0);
 		break;
 	}
 }

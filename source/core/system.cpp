@@ -24,13 +24,13 @@ void initialize(Config::SystemInfo& config)
 	SH2::initialize();
 
 	//Initialize core hardware
-	Cart::initialize(config.cart); // DSI
+	Cart::initialize(config.cart);
 	LoopyIO::initialize();
 
 	//Initialize subprojects after everything else
 	Input::initialize();
-	Video::initialize(); // ISI
-	// Sound::initialize(config.sound_rom);
+	Video::initialize();
+	Sound::initialize(config.sound_rom);
 
 	//Hook up connections between modules
 	SH2::OCPM::Serial::set_tx_callback(1, &Sound::midi_byte_in);

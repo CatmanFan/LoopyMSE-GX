@@ -1,11 +1,7 @@
-#include "core/sh2/sh2_interpreter.h"
-
-// #include "log/log.h"
-
 #include <cassert>
 #include <cstdio>
-
 #include "core/sh2/sh2_bus.h"
+#include "core/sh2/sh2_interpreter.h"
 #include "core/sh2/sh2_local.h"
 
 namespace SH2::Interpreter
@@ -16,26 +12,20 @@ namespace SH2::Interpreter
 #define GET_Q() ((sh2.sr >> 8) & 0x1)
 #define GET_M() ((sh2.sr >> 9) & 0x1)
 
-#define SET_T(x)             \
-	do                       \
-	{                        \
-		sh2.sr &= ~0x1;      \
-		sh2.sr |= (x) & 0x1; \
-	} while (0);
+#define SET_T(x) do {			\
+	sh2.sr &= ~0x1;				\
+	sh2.sr |= (x) & 0x1;		\
+} while (0);
 
-#define SET_Q(x)                    \
-	do                              \
-	{                               \
-		sh2.sr &= ~0x100;           \
-		sh2.sr |= ((x) & 0x1) << 8; \
-	} while (0);
+#define SET_Q(x) do {			\
+	sh2.sr &= ~0x100;			\
+	sh2.sr |= ((x) & 0x1) << 8; \
+} while (0);
 
-#define SET_M(x)                    \
-	do                              \
-	{                               \
-		sh2.sr &= ~0x200;           \
-		sh2.sr |= ((x) & 0x1) << 9; \
-	} while (0);
+#define SET_M(x) do {			\
+	sh2.sr &= ~0x200;			\
+	sh2.sr |= ((x) & 0x1) << 9; \
+} while (0);
 
 static void handle_jump(uint32_t dst, bool delay_slot)
 {
@@ -64,7 +54,6 @@ static uint32_t get_control_reg(int index)
 	case 2:
 		return sh2.vbr;
 	default:
-		// assert(0); // /!\ QUITS APP /!\ //
 		return 0;
 	}
 }
@@ -84,7 +73,6 @@ static void set_control_reg(int index, uint32_t value)
 		sh2.vbr = value;
 		break;
 	default:
-		assert(0);
 		break;
 	}
 }
@@ -101,7 +89,6 @@ static uint32_t get_system_reg(int index)
 	case 2:
 		return sh2.pr;
 	default:
-		// assert(0); // /!\ QUITS APP /!\ //
 		return 0;
 	}
 }
@@ -121,7 +108,6 @@ static void set_system_reg(int index, uint32_t value)
 		sh2.pr = value;
 		break;
 	default:
-		assert(0);
 		break;
 	}
 }
@@ -506,7 +492,7 @@ static void cmpeq_imm(uint16_t instr)
 {
 	int32_t imm = (int32_t)(int8_t)(instr & 0xFF);
 
-	bool result = sh2.gpr[0] == imm;
+	bool result = (int32_t)sh2.gpr[0] == imm;
 	SET_T(result);
 }
 
@@ -1608,7 +1594,6 @@ void run(uint16_t instr, uint32_t src_addr)
 	else
 	{
 		// printf("[SH2] unrecognized instr %04X at %08X\n", instr, src_addr);
-		// assert(0); // /!\ QUITS APP /!\ //
 	}
 }
 

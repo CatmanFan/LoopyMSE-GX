@@ -101,7 +101,7 @@ void Channel::start_transfer()
 	//TODO: speed this up by doing memcpy if both addresses are in Memory
 	if (ctrl.transfer_16bit)
 	{
-		// Log::debug("[DMAC] start 16bit transfer src:%08X dst:%08X size:%08X sstep:%d dstep:%d", src_addr, dst_addr, transfer_size, src_step, dst_step);
+		// printf("[DMAC] start 16bit transfer src:%08X dst:%08X size:%08X sstep:%d dstep:%d", src_addr, dst_addr, transfer_size, src_step, dst_step);
 		in_dma_state = true;
 		while (transfer_size && state.dreqs[ctrl.mode])
 		{
@@ -116,7 +116,7 @@ void Channel::start_transfer()
 	}
 	else
 	{
-		// Log::debug("[DMAC] start 8bit transfer src:%08X dst:%08X size:%08X sstep:%d dstep:%d", src_addr, dst_addr, transfer_size, src_step, dst_step);
+		// printf("[DMAC] start 8bit transfer src:%08X dst:%08X size:%08X sstep:%d dstep:%d", src_addr, dst_addr, transfer_size, src_step, dst_step);
 		in_dma_state = true;
 		while (transfer_size && state.dreqs[ctrl.mode])
 		{

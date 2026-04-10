@@ -84,8 +84,7 @@ static int get_bg_tile_size(int index)
 		tile_size = 64;
 		break;
 	default:
-		// assert(0);
-		break;
+		break; // return 0;
 	}
 	return tile_size;
 }
@@ -111,8 +110,9 @@ static void get_tilemap_info(TilemapInfo& info)
 		info.height = 32;
 		break;
 	default:
-		// assert(0);
-		break;
+		info.width = 0;
+		info.height = 0;
+		break; // return;
 	}
 
 	info.data_start = (info.width * info.height) << 1;
@@ -254,8 +254,7 @@ static void draw_bitmap(int index, int y)
 		vram_height = 512;
 		break;
 	default:
-		// assert(0);
-		break;
+		return;
 	}
 
 	int width_mask = vram_width - 1;
@@ -413,8 +412,7 @@ static void draw_obj(int index, int screen_y)
 			obj_height = 32;
 			break;
 		default:
-			// assert(0);
-			break;
+			return;
 		}
 
 		int start_y = (descriptor >> 16) & 0xFF;
@@ -674,8 +672,7 @@ static void display_capture(int y)
 		memcpy(vdp.capture_buffer, vdp.screens[0], DISPLAY_WIDTH * sizeof(uint8_t));
 		break;
 	default:
-		// assert(0);
-		break;
+		return;
 	}
 }
 
@@ -712,8 +709,7 @@ void draw_scanline(int y)
 		draw_screen_overlay(y, false);
 		break;
 	default:
-		// assert(0);
-		break;
+		return;
 	}
 
 	if (vdp.capture_enable && y == vdp.capture_ctrl.scanline)

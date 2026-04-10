@@ -12,7 +12,7 @@
 #include "core/loopy_io.h"
 #include "core/sh2/peripherals/sh2_ocpm.h"
 #include "core/sh2/sh2_local.h"
-#include "expansion/expansion.h"
+// #include "expansion/expansion.h"
 
 namespace SH2::Bus
 {
@@ -51,35 +51,35 @@ static uint32_t translate_addr(uint32_t addr)
 
 uint8_t unmapped_read8(uint32_t addr)
 {
-	// Log::warn("[SH2] unmapped read8 %08X", addr);
+	// printf("[SH2] unmapped read8 %08X", addr);
 	return 0;
 }
 
 uint16_t unmapped_read16(uint32_t addr)
 {
-	// Log::warn("[SH2] unmapped read16 %08X", addr);
+	// printf("[SH2] unmapped read16 %08X", addr);
 	return 0;
 }
 
 uint32_t unmapped_read32(uint32_t addr)
 {
-	// Log::warn("[SH2] unmapped read32 %08X", addr);
+	// printf("[SH2] unmapped read32 %08X", addr);
 	return 0;
 }
 
 void unmapped_write8(uint32_t addr, uint8_t value)
 {
-	// Log::warn("[SH2] unmapped write8 %08X: %02X", addr, value);
+	// printf("[SH2] unmapped write8 %08X: %02X", addr, value);
 }
 
 void unmapped_write16(uint32_t addr, uint16_t value)
 {
-	// Log::warn("[SH2] unmapped write16 %08X: %04X", addr, value);
+	// printf("[SH2] unmapped write16 %08X: %04X", addr, value);
 }
 
 void unmapped_write32(uint32_t addr, uint32_t value)
 {
-	// Log::warn("[SH2] unmapped write32 %08X: %08X", addr, value);
+	// printf("[SH2] unmapped write32 %08X: %08X", addr, value);
 }
 
 uint8_t read8(uint32_t addr)

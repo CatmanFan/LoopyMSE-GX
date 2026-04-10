@@ -75,7 +75,7 @@ static Timer* get_timer(int id)
 		return state.cur_timer;
 	}
 
-	assert(id < state.timers.size());
+	assert(id < (int)state.timers.size());
 	return &state.timers[id];
 }
 
