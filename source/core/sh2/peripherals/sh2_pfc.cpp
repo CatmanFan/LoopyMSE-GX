@@ -1,5 +1,3 @@
-// #include "log/log.h"
-
 #include <cassert>
 #include "core/sh2/peripherals/sh2_pfc.h"
 #include "core/sh2/sh2_bus.h"

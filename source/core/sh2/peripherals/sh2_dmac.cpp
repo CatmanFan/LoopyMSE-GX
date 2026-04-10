@@ -1,5 +1,3 @@
-// #include "log/log.h"
-
 #include <cassert>
 #include "core/sh2/peripherals/sh2_dmac.h"
 #include "core/sh2/sh2_bus.h"
@@ -171,7 +169,6 @@ uint16_t read16(uint32_t addr)
 	case 0x0E:
 		return chan->get_ctrl();
 	default:
-		assert(0);
 		return 0;
 	}
 }
@@ -202,7 +199,6 @@ void write16(uint32_t addr, uint16_t value)
 		check_activations();
 		break;
 	default:
-		assert(0);
 		break;
 	}
 }
@@ -222,7 +218,6 @@ void write32(uint32_t addr, uint32_t value)
 		chan->dst_addr = value;
 		break;
 	default:
-		assert(0);
 		break;
 	}
 }
