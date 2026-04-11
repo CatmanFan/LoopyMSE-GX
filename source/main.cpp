@@ -274,14 +274,17 @@ int main(int argc, char **argv) {
 			roms.push_back(rom.path().stem());
 	}
 
-	if (roms.size() == 0)
+	if (autoboot_rom == 0)
 	{
-		PrintHeader();
-		fatal("no ROMs found in roms directory");
-	}
-	if (roms.size() == 1 && autoboot_rom == 0)
-	{
-		autoboot_rom = 1;
+		if (roms.size() == 0)
+		{
+			PrintHeader();
+			fatal("no ROMs found in roms directory");
+		}
+		if (roms.size() == 1)
+		{
+			autoboot_rom = 1;
+		}
 	}
 
 	bool inMenu = autoboot_rom == 0;
@@ -298,9 +301,10 @@ int main(int argc, char **argv) {
 		#ifdef USE_WIIDRC
 			WiiDRC_ScanPads();
 			const struct WiiDRCData *drcdat = WiiDRC_Data();
-			if ((hasDRC && drcdat->button & WIIDRC_BUTTON_UP) || WPAD_ButtonsDown(0) & WPAD_BUTTON_UP || PAD_ButtonsDown(0) & PAD_BUTTON_UP) {
+			if ((hasDRC && drcdat->button & WIIDRC_BUTTON_UP) || WPAD_ButtonsDown(0) & WPAD_BUTTON_UP || WPAD_ButtonsDown(0) & WPAD_CLASSIC_BUTTON_UP
+			 || PAD_ButtonsDown(0) & PAD_BUTTON_UP) {
 		#else
-			if (WPAD_ButtonsDown(0) & WPAD_BUTTON_UP || PAD_ButtonsDown(0) & PAD_BUTTON_UP) {
+			if (WPAD_ButtonsDown(0) & WPAD_BUTTON_UP || WPAD_ButtonsDown(0) & WPAD_CLASSIC_BUTTON_UP || PAD_ButtonsDown(0) & PAD_BUTTON_UP) {
 		#endif
 		#else
 		if (PAD_ButtonsDown(0) & PAD_BUTTON_UP) {
@@ -313,9 +317,10 @@ int main(int argc, char **argv) {
 
 		#ifdef HW_RVL
 		#ifdef USE_WIIDRC
-			if ((hasDRC && drcdat->button & WIIDRC_BUTTON_DOWN) || WPAD_ButtonsDown(0) & WPAD_BUTTON_DOWN || PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) {
+			if ((hasDRC && drcdat->button & WIIDRC_BUTTON_DOWN) || WPAD_ButtonsDown(0) & WPAD_BUTTON_DOWN || WPAD_ButtonsDown(0) & WPAD_CLASSIC_BUTTON_DOWN
+			 || PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) {
 		#else
-			if (WPAD_ButtonsDown(0) & WPAD_BUTTON_DOWN || PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) {
+			if (WPAD_ButtonsDown(0) & WPAD_BUTTON_DOWN || WPAD_ButtonsDown(0) & WPAD_CLASSIC_BUTTON_DOWN || PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) {
 		#endif
 		#else
 		if (PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) {
@@ -328,9 +333,10 @@ int main(int argc, char **argv) {
 
 		#ifdef HW_RVL
 		#ifdef USE_WIIDRC
-			if ((hasDRC && drcdat->button & WIIDRC_BUTTON_A) || WPAD_ButtonsDown(0) & WPAD_BUTTON_A || PAD_ButtonsDown(0) & PAD_BUTTON_A) {
+			if ((hasDRC && drcdat->button & WIIDRC_BUTTON_A) || WPAD_ButtonsDown(0) & WPAD_BUTTON_A || WPAD_ButtonsDown(0) & WPAD_CLASSIC_BUTTON_A
+			 || PAD_ButtonsDown(0) & PAD_BUTTON_A) {
 		#else
-		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_A || PAD_ButtonsDown(0) & PAD_BUTTON_A) {
+		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_A || WPAD_ButtonsDown(0) & WPAD_CLASSIC_BUTTON_A || PAD_ButtonsDown(0) & PAD_BUTTON_A) {
 		#endif
 		#else
 		if (PAD_ButtonsDown(0) & PAD_BUTTON_A) {
@@ -340,9 +346,11 @@ int main(int argc, char **argv) {
 
 		#ifdef HW_RVL
 		#ifdef USE_WIIDRC
-			if ((hasDRC && drcdat->button & WIIDRC_BUTTON_HOME) || WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME || PAD_ButtonsDown(0) & PAD_BUTTON_B || reset) {
+			if ((hasDRC && drcdat->button & WIIDRC_BUTTON_HOME) || WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME || WPAD_ButtonsDown(0) & WPAD_CLASSIC_BUTTON_HOME
+			 || PAD_ButtonsDown(0) & PAD_BUTTON_B || reset) {
 		#else
-			if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME || PAD_ButtonsDown(0) & PAD_BUTTON_B || reset) {
+			if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME || WPAD_ButtonsDown(0) & WPAD_CLASSIC_BUTTON_HOME
+		     || PAD_ButtonsDown(0) & PAD_BUTTON_B || reset) {
 		#endif
 		#else
 		if (PAD_ButtonsDown(0) & PAD_BUTTON_B || reset) {
@@ -420,7 +428,14 @@ int main(int argc, char **argv) {
 			PAD_ScanPads();
 			#ifdef HW_RVL
 			WPAD_ScanPads();
-			if (WPAD_ButtonsHeld(0) & WPAD_BUTTON_HOME || PAD_ButtonsHeld(0) & (PAD_BUTTON_START | PAD_TRIGGER_Z)) {
+			#ifdef USE_WIIDRC
+			WiiDRC_ScanPads();
+			const struct WiiDRCData *drcdat = WiiDRC_Data();
+			if (hasDRC && drcdat->button & WIIDRC_BUTTON_HOME) {
+			#else
+			if (WPAD_ButtonsHeld(0) & WPAD_BUTTON_HOME || WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_HOME
+			 || PAD_ButtonsHeld(0) & (PAD_BUTTON_START | PAD_TRIGGER_Z)) {
+			#endif
 			#else
 			if (PAD_ButtonsHeld(0) & (PAD_BUTTON_START | PAD_TRIGGER_Z)) {
 			#endif
@@ -462,8 +477,6 @@ int main(int argc, char **argv) {
 			#ifdef HW_RVL
 			WPADData* data_wpad = WPAD_Data(0);
 			#ifdef USE_WIIDRC
-			WiiDRC_ScanPads();
-			const struct WiiDRCData *drcdat = WiiDRC_Data();
 			if (hasDRC) {
 				// LoopyIO::update_pad(Input::PAD_PRESENCE,	drcdat->button & WIIDRC_BUTTON_MINUS);
 				LoopyIO::update_pad(Input::PAD_START,		drcdat->button & WIIDRC_BUTTON_PLUS);
