@@ -8,6 +8,10 @@ Latest build is compiled with each commit and can be downloaded from [Github Act
 
 ### To-Do
 - Code translation (dynarec), use [Seta GX](https://github.com/fadedled/seta-gx) as a reference?
+- Fix cropping issue when changing between 240/224-line modes?
 
 ### Credits
 Credits to PSI, kasami and partlyhuman for their work on the original emulator.
+
+### License
+The original project and this fork are both licensed under GPL-3.0.
