@@ -555,7 +555,9 @@ void ctrl_write16(uint32_t addr, uint16_t value)
 		vdp.mode.mouse_scan = (value >> 3) & 0x1;
 		vdp.mode.pad_scan = (value >> 4) & 0x1;
 		vdp.mode.unk2 = (value >> 5) & 0x1;
-		assert(!vdp.mode.use_pal);
+		//assert(!vdp.mode.use_pal); // KILLS APP WHEN USING BIOS
+		if (!vdp.mode.use_pal)
+			return;
 
 		vdp.visible_scanlines = (vdp.mode.extra_scanlines) ? 0xF0 : 0xE0;
 		break;

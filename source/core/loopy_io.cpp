@@ -77,10 +77,16 @@ void update_pad(int key_info, bool pressed)
 {
 	if (pressed)
 	{
+		// if (!(state.pad_buttons & key_info))
+			// printf("[IO] button %3X pressed\n", key_info);
+
 		state.pad_buttons |= key_info;
 	}
 	else
 	{
+		// if (state.pad_buttons & key_info)
+			// printf("[IO] button %3X unpressed\n", key_info);
+
 		state.pad_buttons &= ~key_info;
 	}
 }

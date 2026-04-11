@@ -14,7 +14,7 @@ jobs:
         sudo dkp-pacman-key --recv-keys C8A2759C315CFBC3429CC2E422B803BA8AA3D7CE --keyserver keyserver.ubuntu.com
         sudo dkp-pacman-key --lsign-key C8A2759C315CFBC3429CC2E422B803BA8AA3D7CE
         sudo dkp-pacman -Sy
-        sudo dkp-pacman -S --noconfirm --ask 4 wii-sdl2 wii-sdl2_image wii-sdl2_mixer
+        sudo dkp-pacman -S --noconfirm --ask 4 wii-sdl2
 
     - name: Checkout
       uses: actions/checkout@main

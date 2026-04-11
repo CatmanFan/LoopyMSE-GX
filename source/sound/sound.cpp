@@ -137,7 +137,7 @@ uint8_t ctrl_read8(uint32_t addr)
 
 uint16_t ctrl_read16(uint32_t addr)
 {
-	assert(0);
+	// assert(0);
 	return 0;
 }
 

@@ -94,13 +94,16 @@ void initialize()
 	else
 	{
 		//The initial values of PC and SP are read from the vector table
-		int boot_type = 1;
+		/*int boot_type = 0;
 		uint8_t* boot_vectors = sh2.pagetable[0];
 		uint32_t reset_pc, reset_sp;
 		memcpy(&reset_pc, boot_vectors + boot_type*8 + 0, 4);
 		memcpy(&reset_sp, boot_vectors + boot_type*8 + 4, 4);
-		set_pc(Common::bswp32(reset_pc + 0x0E000000));
-		sh2.gpr[15] = Common::bswp32(reset_sp);
+		set_pc(Common::bswp32(reset_pc));
+		sh2.gpr[15] = Common::bswp32(reset_sp);*/
+
+		set_pc(0x00000400);
+		sh2.gpr[15] = 0;
 	}
 
 	//Next, VBR is cleared to zero and interrupt mask bits in SR are set to 1111

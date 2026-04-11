@@ -24,6 +24,7 @@
 
 #include "common/bswp.h"
 #include "core/config.h"
+#include "core/loopy_io.h"
 #include "core/system.h"
 #include "input/input.h"
 #include "sound/sound.h"
@@ -52,12 +53,12 @@ namespace SDL
 		}
 
 		//Try synchronizing drawing to VBLANK
-		// SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-		SDL_SetHint("SDL_JOYSTICK_HIDAPI_WII", "1");
+		SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+		// SDL_SetHint("SDL_JOYSTICK_HIDAPI_WII", "1");
  
 		// make sure SDL cleans up before exit
 		atexit(SDL_Quit);
-		// SDL_ShowCursor(SDL_DISABLE);
+		SDL_ShowCursor(SDL_DISABLE);
 
 		// create a new window
 		screen.window = SDL_CreateWindow(
@@ -195,6 +196,7 @@ int main(int argc, char **argv) {
 
 	// This function initialises the attached controllers
 	PAD_Init();
+
 	WPAD_Init();
 	// Enable all buttons and accelerometer for all connected controllers
 	WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
@@ -276,29 +278,34 @@ int main(int argc, char **argv) {
 
 	while (SYS_MainLoop() && inMenu)
 	{
+		PAD_ScanPads();
+
 		WPAD_ScanPads();
-		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_UP) {
+		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_UP || PAD_ButtonsDown(0) & PAD_BUTTON_UP) {
 			render = true;
 			rom_selected--;
 			if (rom_selected < 0 || rom_selected >= roms.size())
 				rom_selected = roms.size() - 1;
 		}
-		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_DOWN) {
+
+		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_DOWN || PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) {
 			render = true;
 			rom_selected++;
 			if (rom_selected >= roms.size())
 				rom_selected = 0;
 		}
-		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_A) {
+
+		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_A || PAD_ButtonsDown(0) & PAD_BUTTON_A) {
 			inMenu = false;
 		}
-		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME) {
+
+		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME || PAD_ButtonsDown(0) & PAD_BUTTON_B) {
 			break;
 		}
 
 		if (render) {
 			PrintHeader();
-			printf("Up/Down to select a ROM, A to launch, HOME to exit\n\n");
+			printf("Up/Down to select a ROM, A to launch, HOME (Wiimote) or B (GC) to exit\n\n");
 			for (unsigned int i = 0; i < roms.size(); i++) {
 				if (i == rom_selected)	{ printf("> "); }
 				else					{ printf("  "); }
@@ -350,30 +357,18 @@ int main(int argc, char **argv) {
 		Sound::set_mute(false);
 
 		//All subprojects have been initialized, so it is safe to reference them now
-		Input::add_key_binding(SDL_CONTROLLER_BUTTON_START, Input::PAD_START);
-
-		Input::add_key_binding(SDL_CONTROLLER_BUTTON_A, Input::PAD_A);
-		Input::add_key_binding(SDL_CONTROLLER_BUTTON_B, Input::PAD_B);
-		Input::add_key_binding(SDL_CONTROLLER_BUTTON_X, Input::PAD_C);
-		Input::add_key_binding(SDL_CONTROLLER_BUTTON_Y, Input::PAD_D);
-
-		Input::add_key_binding(SDL_CONTROLLER_BUTTON_LEFTSHOULDER, Input::PAD_L1);
-		Input::add_key_binding(SDL_CONTROLLER_BUTTON_RIGHTSHOULDER, Input::PAD_R1);
-
-		Input::add_key_binding(SDL_HAT_LEFT, Input::PAD_LEFT);
-		Input::add_key_binding(SDL_HAT_LEFT, Input::PAD_RIGHT);
-		Input::add_key_binding(SDL_HAT_UP, Input::PAD_UP);
-		Input::add_key_binding(SDL_HAT_DOWN, Input::PAD_DOWN);
-
 		if (!SDL::initialize())
 			fatal("failed to init SDL");
 
 		while (SYS_MainLoop())
 		{
+			PAD_ScanPads();
+
 			WPAD_ScanPads();
 			if (WPAD_ButtonsHeld(0) & WPAD_BUTTON_HOME) {
 				exit(0);
 			}
+
 			if (shutdown) {
 				break;
 			}
@@ -381,21 +376,33 @@ int main(int argc, char **argv) {
 			System::run();
 			SDL::update(System::get_display_output());
 
-			SDL_Event e;
-			while (SDL_PollEvent(&e))
-			{
-				switch (e.type)
-				{
-				// case SDL_QUIT:
-					// has_quit = true;
-					// break;
-				case SDL_CONTROLLERBUTTONDOWN:
-					Input::set_key_state(e.key.keysym.sym, true);
-					break;
-				case SDL_CONTROLLERBUTTONUP:
-					Input::set_key_state(e.key.keysym.sym, false);
-					break;
-				}
+			WPADData* data_wpad = WPAD_Data(0);
+			if (data_wpad->exp.type != WPAD_EXP_CLASSIC) {
+				// LoopyIO::update_pad(Input::PAD_PRESENCE,	WPAD_ButtonsHeld(0) & WPAD_BUTTON_MINUS				|| PAD_ButtonsHeld(0) & PAD_TRIGGER_Z);
+				LoopyIO::update_pad(Input::PAD_START,		WPAD_ButtonsHeld(0) & WPAD_BUTTON_PLUS				|| PAD_ButtonsHeld(0) & PAD_BUTTON_START);
+				LoopyIO::update_pad(Input::PAD_L1,			WPAD_ButtonsHeld(0) & WPAD_NUNCHUK_BUTTON_Z			|| PAD_ButtonsHeld(0) & PAD_TRIGGER_L);
+				LoopyIO::update_pad(Input::PAD_R1,			WPAD_ButtonsHeld(0) & WPAD_NUNCHUK_BUTTON_C			|| PAD_ButtonsHeld(0) & PAD_TRIGGER_R);
+				LoopyIO::update_pad(Input::PAD_A,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_1					|| PAD_ButtonsHeld(0) & PAD_BUTTON_A);
+				LoopyIO::update_pad(Input::PAD_B,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_2					|| PAD_ButtonsHeld(0) & PAD_BUTTON_B);
+				LoopyIO::update_pad(Input::PAD_C,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_A					|| PAD_ButtonsHeld(0) & PAD_BUTTON_X);
+				LoopyIO::update_pad(Input::PAD_D,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_B					|| PAD_ButtonsHeld(0) & PAD_BUTTON_Y);
+				LoopyIO::update_pad(Input::PAD_UP,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_RIGHT				|| PAD_ButtonsHeld(0) & PAD_BUTTON_UP);
+				LoopyIO::update_pad(Input::PAD_DOWN,		WPAD_ButtonsHeld(0) & WPAD_BUTTON_LEFT				|| PAD_ButtonsHeld(0) & PAD_BUTTON_DOWN);
+				LoopyIO::update_pad(Input::PAD_LEFT,		WPAD_ButtonsHeld(0) & WPAD_BUTTON_UP				|| PAD_ButtonsHeld(0) & PAD_BUTTON_LEFT);
+				LoopyIO::update_pad(Input::PAD_RIGHT,		WPAD_ButtonsHeld(0) & WPAD_BUTTON_DOWN				|| PAD_ButtonsHeld(0) & PAD_BUTTON_RIGHT);
+			} else {
+				// LoopyIO::update_pad(Input::PAD_PRESENCE,	WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_MINUS		|| PAD_ButtonsHeld(0) & PAD_TRIGGER_Z);
+				LoopyIO::update_pad(Input::PAD_START,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_PLUS		|| PAD_ButtonsHeld(0) & PAD_BUTTON_START);
+				LoopyIO::update_pad(Input::PAD_L1,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_FULL_L	|| PAD_ButtonsHeld(0) & PAD_TRIGGER_L);
+				LoopyIO::update_pad(Input::PAD_R1,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_FULL_R	|| PAD_ButtonsHeld(0) & PAD_TRIGGER_R);
+				LoopyIO::update_pad(Input::PAD_A,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_A			|| PAD_ButtonsHeld(0) & PAD_BUTTON_A);
+				LoopyIO::update_pad(Input::PAD_B,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_B			|| PAD_ButtonsHeld(0) & PAD_BUTTON_B);
+				LoopyIO::update_pad(Input::PAD_C,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_X			|| PAD_ButtonsHeld(0) & PAD_BUTTON_X);
+				LoopyIO::update_pad(Input::PAD_D,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_Y			|| PAD_ButtonsHeld(0) & PAD_BUTTON_Y);
+				LoopyIO::update_pad(Input::PAD_UP,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_UP		|| PAD_ButtonsHeld(0) & PAD_BUTTON_UP);
+				LoopyIO::update_pad(Input::PAD_DOWN,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_DOWN		|| PAD_ButtonsHeld(0) & PAD_BUTTON_DOWN);
+				LoopyIO::update_pad(Input::PAD_LEFT,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_LEFT		|| PAD_ButtonsHeld(0) & PAD_BUTTON_LEFT);
+				LoopyIO::update_pad(Input::PAD_RIGHT,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_RIGHT		|| PAD_ButtonsHeld(0) & PAD_BUTTON_RIGHT);
 			}
 		}
 
