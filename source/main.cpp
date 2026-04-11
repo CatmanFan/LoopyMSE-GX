@@ -129,25 +129,33 @@ static std::string remove_extension(std::string file_path)
 	return file_path.substr(0, pos);
 }
 
+static void PrintHeader()
+{
+    printf("\033[2J\033[H"); // Clear screen
+	printf("LoopyMSE-GX v0.1-beta           Casio Loopy emulator for Wii (experimental)\n");
+	printf("___________________________________________________________________________\n\n");
+}
+
 static bool initFat() {
 	if (!fatInitDefault()) {
+		PrintHeader();
 		printf("fatInitDefault failure: terminating\n");
 		return false;
 	}
 
-	if(fatMountSimple("sd", &__io_wiisd)) {
-		printf("detected SD\n");
+	if (fatMountSimple("sd", &__io_wiisd))
 		devicePrefix = "sd:/";
-	} else if (fatMountSimple("usb", &__io_usbstorage)){
-		printf("detected USB\n");
+	else if (fatMountSimple("usb", &__io_usbstorage))
 		devicePrefix = "usb:/";
-	} else {
+	else {
+		PrintHeader();
 		printf("fatMountSimple failure: terminating\n");
 		return false;
 	}
 
 	DIR *pdir = opendir(devicePrefix.c_str());
-	if (!pdir){
+	if (!pdir) {
+		PrintHeader();
 		printf ("opendir() failure; terminating\n");
 		return false;
 	}
@@ -178,13 +186,6 @@ static void CreateAppPath(std::string file_path)
 		appPath = "sd:/apps/LoopyMSE-GX";
 	else
 		appPath = file_path.substr(0, pos - 4);
-}
-
-static void PrintHeader()
-{
-    printf("\033[2J\033[H"); // Clear screen
-	printf("LoopyMSE-GX v0.1 (experimental)                 Casio Loopy emulator for Wii\n");
-	printf("____________________________________________________________________________\n\n");
 }
 
 //---------------------------------------------------------------------------------
@@ -223,16 +224,13 @@ int main(int argc, char **argv) {
 	if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
 	VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_BLACK);
 
-	PrintHeader();
-	printf("Loading\n");
-
 	if (!initFat()) {
 		fatal("failed to init libfat");
 	}
 
 	// store path app was loaded from
 	CreateAppPath(argc > 0 && argv[0] != NULL ? argv[0] : "sd:/apps/LoopyMSE-GX/boot.dol");
-	printf("Running from %s\n", appPath.c_str());
+	// printf("Running from %s\n", appPath.c_str());
 
 	Config::SystemInfo config;
 	std::string bios_name = appPath + "/bios.bin";
@@ -242,6 +240,7 @@ int main(int argc, char **argv) {
 	std::ifstream bios_file(bios_name, std::ios::binary);
 	if (!bios_file.is_open())
 	{
+		PrintHeader();
 		fatal("bios.bin not found");
 	}
 	config.bios_rom.assign(std::istreambuf_iterator<char>(bios_file), {});
@@ -262,6 +261,7 @@ int main(int argc, char **argv) {
 	std::ifstream sound_rom_file(sound_rom_name, std::ios::binary);
 	if (!sound_rom_file.is_open())
 	{
+		PrintHeader();
 		printf("Warning: soundbios.bin not found.\n         Emulator will continue without sound.");
 		sleep(3);
 	}
@@ -273,6 +273,7 @@ int main(int argc, char **argv) {
 
 	if (!std::filesystem::is_directory(appPath + "/roms"))
 	{
+		PrintHeader();
 		fatal("roms directory not found");
 	}
 
@@ -283,6 +284,7 @@ int main(int argc, char **argv) {
 
 	if (roms.size() == 0)
 	{
+		PrintHeader();
 		fatal("no ROMs found in roms directory");
 	}
 	if (roms.size() == 1 && autoboot_rom == 0)
@@ -376,7 +378,8 @@ int main(int argc, char **argv) {
 	if (inMenu) {
 		exit(0);
 	} else {
-		PrintHeader();
+		if (autoboot_rom == 0)
+			PrintHeader();
 
 		if (autoboot_rom < 2)
 		{
@@ -397,11 +400,11 @@ int main(int argc, char **argv) {
 		std::ifstream sram_file(config.cart.sram_file_path, std::ios::binary);
 		if (!sram_file.is_open())
 		{
-			printf("Warning: SRAM not found\n");
+			if (autoboot_rom == 0) { printf("Warning: SRAM not found\n"); }
 		}
 		else
 		{
-			printf("Successfully found SRAM\n");
+			if (autoboot_rom == 0) { printf("Successfully found SRAM\n"); }
 			config.cart.sram.assign(std::istreambuf_iterator<char>(sram_file), {});
 			sram_file.close();
 		}
@@ -412,7 +415,7 @@ int main(int argc, char **argv) {
 		config.cart.sram.resize(sram_size, 0xFF);
 
 		//Initialize the emulator and all of its subprojects
-		printf("Starting emulator\n");
+		if (autoboot_rom == 0) { printf("Starting emulator\n"); }
 		System::initialize(config);
 		Sound::set_mute(false);
 
@@ -529,6 +532,7 @@ int main(int argc, char **argv) {
 		}
 
 		System::shutdown(config);
+		VIDEO_SetBlack(true);
 		SDL::shutdown();
 		VIDEO_SetBlack(true);
 
