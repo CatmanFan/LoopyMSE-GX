@@ -98,20 +98,12 @@ namespace SDL
 
 	void update(uint16_t* display_output)
 	{
-		// More efficient alternative to SDL_UpdateTexture(screen.texture, NULL, display_output, sizeof(uint16_t) * DISPLAY_WIDTH);
-		void* pixels;
-		int pitch;
-		if (SDL_LockTexture(screen.texture, nullptr, &pixels, &pitch) == 0)
-		{
-			memcpy(pixels, display_output, sizeof(uint16_t) * DISPLAY_WIDTH * DISPLAY_HEIGHT);
-			SDL_UnlockTexture(screen.texture);
-		}
-
 		// Clear screen
 		SDL_SetRenderDrawColor(screen.renderer, 15, 15, 15, 255);
 		SDL_RenderClear(screen.renderer);
 
 		// Draw screen
+		SDL_UpdateTexture(screen.texture, NULL, display_output, sizeof(uint16_t) * DISPLAY_WIDTH);
 		// SDL_Rect dest = {640 / 2 - (DISPLAY_WIDTH / 2), 480 / 2 - (DISPLAY_HEIGHT / 2), DISPLAY_WIDTH, DISPLAY_HEIGHT};
 		SDL_RenderCopy(screen.renderer, screen.texture, NULL, NULL);
 		SDL_RenderPresent(screen.renderer);
