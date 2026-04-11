@@ -156,7 +156,7 @@ static bool initFat() {
 	return true;
 }
 
-static bool shutdown = false, reset = false;
+static bool shutdown = false, reset = false, closeEmu = false;
 
 static void cbShutdown() { shutdown = true; }
 static void cbShutdownWpad(s32 chan) { shutdown = true; }
@@ -423,27 +423,33 @@ int main(int argc, char **argv) {
 		if (!SDL::initialize())
 			fatal("failed to init SDL");
 
+	#ifdef HW_RVL
+		#ifdef USE_WIIDRC
+			int controller = hasDRC ? 2 : 0;
+		#else
+			int controller = 0;
+		#endif
+	#else
+		int controller = 0;
+	#endif
+
 		while (!shutdown)
 		{
-			PAD_ScanPads();
-			#ifdef HW_RVL
-			WPAD_ScanPads();
-			#ifdef USE_WIIDRC
-			WiiDRC_ScanPads();
-			const struct WiiDRCData *drcdat = WiiDRC_Data();
-			if (hasDRC && drcdat->button & WIIDRC_BUTTON_HOME) {
-			#else
-			if (WPAD_ButtonsHeld(0) & WPAD_BUTTON_HOME || WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_HOME
-			 || PAD_ButtonsHeld(0) & (PAD_BUTTON_START | PAD_TRIGGER_Z)) {
-			#endif
-			#else
-			if (PAD_ButtonsHeld(0) & (PAD_BUTTON_START | PAD_TRIGGER_Z)) {
-			#endif
+		#ifdef HW_RVL
+			WPADData* data_wpad = WPAD_Data(0);
+			if (data_wpad->exp.type == WPAD_EXP_CLASSIC && controller == 0)
+				controller = 1;
+			else if (data_wpad->exp.type != WPAD_EXP_CLASSIC && controller == 1)
+				controller = 0;
+		#endif
+
+			if (closeEmu) {
 				if (autoboot_rom == 0) {
 					System::shutdown(config);
 					SDL::shutdown();
 					inMenu = true;
 					render = true;
+					closeEmu = false;
 
 					VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_BLACK);
 					VIDEO_Configure(rmode);
@@ -474,66 +480,103 @@ int main(int argc, char **argv) {
 			System::run();
 			SDL::update(System::get_display_output());
 
-			#ifdef HW_RVL
-			WPADData* data_wpad = WPAD_Data(0);
-			#ifdef USE_WIIDRC
-			if (hasDRC) {
-				// LoopyIO::update_pad(Input::PAD_PRESENCE,	drcdat->button & WIIDRC_BUTTON_MINUS);
-				LoopyIO::update_pad(Input::PAD_START,		drcdat->button & WIIDRC_BUTTON_PLUS);
-				LoopyIO::update_pad(Input::PAD_L1,			drcdat->button & WIIDRC_BUTTON_L);
-				LoopyIO::update_pad(Input::PAD_R1,			drcdat->button & WIIDRC_BUTTON_R);
-				LoopyIO::update_pad(Input::PAD_A,			drcdat->button & WIIDRC_BUTTON_A);
-				LoopyIO::update_pad(Input::PAD_B,			drcdat->button & WIIDRC_BUTTON_B);
-				LoopyIO::update_pad(Input::PAD_C,			drcdat->button & WIIDRC_BUTTON_X);
-				LoopyIO::update_pad(Input::PAD_D,			drcdat->button & WIIDRC_BUTTON_Y);
-				LoopyIO::update_pad(Input::PAD_UP,			drcdat->button & WIIDRC_BUTTON_UP);
-				LoopyIO::update_pad(Input::PAD_DOWN,		drcdat->button & WIIDRC_BUTTON_DOWN);
-				LoopyIO::update_pad(Input::PAD_LEFT,		drcdat->button & WIIDRC_BUTTON_LEFT);
-				LoopyIO::update_pad(Input::PAD_RIGHT,		drcdat->button & WIIDRC_BUTTON_RIGHT);
-			} else if (data_wpad->exp.type != WPAD_EXP_CLASSIC) {
-			#else
-			if (data_wpad->exp.type != WPAD_EXP_CLASSIC) {
-			#endif
-				// LoopyIO::update_pad(Input::PAD_PRESENCE,	WPAD_ButtonsHeld(0) & WPAD_BUTTON_MINUS				|| PAD_ButtonsHeld(0) & PAD_TRIGGER_Z);
-				LoopyIO::update_pad(Input::PAD_START,		WPAD_ButtonsHeld(0) & WPAD_BUTTON_PLUS				|| PAD_ButtonsHeld(0) & PAD_BUTTON_START);
-				LoopyIO::update_pad(Input::PAD_L1,			WPAD_ButtonsHeld(0) & WPAD_NUNCHUK_BUTTON_Z			|| PAD_ButtonsHeld(0) & PAD_TRIGGER_L);
-				LoopyIO::update_pad(Input::PAD_R1,			WPAD_ButtonsHeld(0) & WPAD_NUNCHUK_BUTTON_C			|| PAD_ButtonsHeld(0) & PAD_TRIGGER_R);
-				LoopyIO::update_pad(Input::PAD_A,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_2					|| PAD_ButtonsHeld(0) & PAD_BUTTON_A);
-				LoopyIO::update_pad(Input::PAD_B,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_1					|| PAD_ButtonsHeld(0) & PAD_BUTTON_B);
-				LoopyIO::update_pad(Input::PAD_C,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_A					|| PAD_ButtonsHeld(0) & PAD_BUTTON_X);
-				LoopyIO::update_pad(Input::PAD_D,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_B					|| PAD_ButtonsHeld(0) & PAD_BUTTON_Y);
-				LoopyIO::update_pad(Input::PAD_UP,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_RIGHT				|| PAD_ButtonsHeld(0) & PAD_BUTTON_UP);
-				LoopyIO::update_pad(Input::PAD_DOWN,		WPAD_ButtonsHeld(0) & WPAD_BUTTON_LEFT				|| PAD_ButtonsHeld(0) & PAD_BUTTON_DOWN);
-				LoopyIO::update_pad(Input::PAD_LEFT,		WPAD_ButtonsHeld(0) & WPAD_BUTTON_UP				|| PAD_ButtonsHeld(0) & PAD_BUTTON_LEFT);
-				LoopyIO::update_pad(Input::PAD_RIGHT,		WPAD_ButtonsHeld(0) & WPAD_BUTTON_DOWN				|| PAD_ButtonsHeld(0) & PAD_BUTTON_RIGHT);
-			} else {
-				// LoopyIO::update_pad(Input::PAD_PRESENCE,	WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_MINUS		|| PAD_ButtonsHeld(0) & PAD_TRIGGER_Z);
-				LoopyIO::update_pad(Input::PAD_START,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_PLUS		|| PAD_ButtonsHeld(0) & PAD_BUTTON_START);
-				LoopyIO::update_pad(Input::PAD_L1,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_FULL_L	|| PAD_ButtonsHeld(0) & PAD_TRIGGER_L);
-				LoopyIO::update_pad(Input::PAD_R1,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_FULL_R	|| PAD_ButtonsHeld(0) & PAD_TRIGGER_R);
-				LoopyIO::update_pad(Input::PAD_A,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_A			|| PAD_ButtonsHeld(0) & PAD_BUTTON_A);
-				LoopyIO::update_pad(Input::PAD_B,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_B			|| PAD_ButtonsHeld(0) & PAD_BUTTON_B);
-				LoopyIO::update_pad(Input::PAD_C,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_X			|| PAD_ButtonsHeld(0) & PAD_BUTTON_X);
-				LoopyIO::update_pad(Input::PAD_D,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_Y			|| PAD_ButtonsHeld(0) & PAD_BUTTON_Y);
-				LoopyIO::update_pad(Input::PAD_UP,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_UP		|| PAD_ButtonsHeld(0) & PAD_BUTTON_UP);
-				LoopyIO::update_pad(Input::PAD_DOWN,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_DOWN		|| PAD_ButtonsHeld(0) & PAD_BUTTON_DOWN);
-				LoopyIO::update_pad(Input::PAD_LEFT,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_LEFT		|| PAD_ButtonsHeld(0) & PAD_BUTTON_LEFT);
-				LoopyIO::update_pad(Input::PAD_RIGHT,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_RIGHT		|| PAD_ButtonsHeld(0) & PAD_BUTTON_RIGHT);
+			switch (controller)
+			{
+				default:
+				case 0:
+					PAD_ScanPads();
+				#ifdef HW_RVL
+					WPAD_ScanPads();
+
+					if (WPAD_ButtonsHeld(0) & WPAD_BUTTON_HOME)
+						closeEmu = true;
+					if (PAD_ButtonsHeld(0) & (PAD_BUTTON_START | PAD_TRIGGER_Z))
+						closeEmu = true;
+
+					// LoopyIO::update_pad(Input::PAD_PRESENCE,	WPAD_ButtonsHeld(0) & WPAD_BUTTON_MINUS				|| PAD_ButtonsHeld(0) & PAD_TRIGGER_Z);
+					LoopyIO::update_pad(Input::PAD_START,		WPAD_ButtonsHeld(0) & WPAD_BUTTON_PLUS				|| PAD_ButtonsHeld(0) & PAD_BUTTON_START);
+					LoopyIO::update_pad(Input::PAD_L1,			WPAD_ButtonsHeld(0) & WPAD_NUNCHUK_BUTTON_Z			|| PAD_ButtonsHeld(0) & PAD_TRIGGER_L);
+					LoopyIO::update_pad(Input::PAD_R1,			WPAD_ButtonsHeld(0) & WPAD_NUNCHUK_BUTTON_C			|| PAD_ButtonsHeld(0) & PAD_TRIGGER_R);
+					LoopyIO::update_pad(Input::PAD_A,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_2					|| PAD_ButtonsHeld(0) & PAD_BUTTON_A);
+					LoopyIO::update_pad(Input::PAD_B,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_1					|| PAD_ButtonsHeld(0) & PAD_BUTTON_B);
+					LoopyIO::update_pad(Input::PAD_C,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_A					|| PAD_ButtonsHeld(0) & PAD_BUTTON_X);
+					LoopyIO::update_pad(Input::PAD_D,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_B					|| PAD_ButtonsHeld(0) & PAD_BUTTON_Y);
+					LoopyIO::update_pad(Input::PAD_UP,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_RIGHT				|| PAD_ButtonsHeld(0) & PAD_BUTTON_UP);
+					LoopyIO::update_pad(Input::PAD_DOWN,		WPAD_ButtonsHeld(0) & WPAD_BUTTON_LEFT				|| PAD_ButtonsHeld(0) & PAD_BUTTON_DOWN);
+					LoopyIO::update_pad(Input::PAD_LEFT,		WPAD_ButtonsHeld(0) & WPAD_BUTTON_UP				|| PAD_ButtonsHeld(0) & PAD_BUTTON_LEFT);
+					LoopyIO::update_pad(Input::PAD_RIGHT,		WPAD_ButtonsHeld(0) & WPAD_BUTTON_DOWN				|| PAD_ButtonsHeld(0) & PAD_BUTTON_RIGHT);
+				#else
+					// LoopyIO::update_pad(Input::PAD_PRESENCE,	PAD_ButtonsHeld(0) & PAD_TRIGGER_Z);
+					LoopyIO::update_pad(Input::PAD_START,		PAD_ButtonsHeld(0) & PAD_BUTTON_START);
+					LoopyIO::update_pad(Input::PAD_L1,			PAD_ButtonsHeld(0) & PAD_TRIGGER_L);
+					LoopyIO::update_pad(Input::PAD_R1,			PAD_ButtonsHeld(0) & PAD_TRIGGER_R);
+					LoopyIO::update_pad(Input::PAD_A,			PAD_ButtonsHeld(0) & PAD_BUTTON_A);
+					LoopyIO::update_pad(Input::PAD_B,			PAD_ButtonsHeld(0) & PAD_BUTTON_B);
+					LoopyIO::update_pad(Input::PAD_C,			PAD_ButtonsHeld(0) & PAD_BUTTON_X);
+					LoopyIO::update_pad(Input::PAD_D,			PAD_ButtonsHeld(0) & PAD_BUTTON_Y);
+					LoopyIO::update_pad(Input::PAD_UP,			PAD_ButtonsHeld(0) & PAD_BUTTON_UP);
+					LoopyIO::update_pad(Input::PAD_DOWN,		PAD_ButtonsHeld(0) & PAD_BUTTON_DOWN);
+					LoopyIO::update_pad(Input::PAD_LEFT,		PAD_ButtonsHeld(0) & PAD_BUTTON_LEFT);
+					LoopyIO::update_pad(Input::PAD_RIGHT,		PAD_ButtonsHeld(0) & PAD_BUTTON_RIGHT);
+				#endif
+					break;
+
+				case 1:
+					PAD_ScanPads();
+				#ifdef HW_RVL
+					WPAD_ScanPads();
+
+					if (WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_HOME)
+						closeEmu = true;
+					if (PAD_ButtonsHeld(0) & (PAD_BUTTON_START | PAD_TRIGGER_Z))
+						closeEmu = true;
+
+					// LoopyIO::update_pad(Input::PAD_PRESENCE,	WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_MINUS		|| PAD_ButtonsHeld(0) & PAD_TRIGGER_Z);
+					LoopyIO::update_pad(Input::PAD_START,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_PLUS		|| PAD_ButtonsHeld(0) & PAD_BUTTON_START);
+					LoopyIO::update_pad(Input::PAD_L1,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_FULL_L	|| PAD_ButtonsHeld(0) & PAD_TRIGGER_L);
+					LoopyIO::update_pad(Input::PAD_R1,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_FULL_R	|| PAD_ButtonsHeld(0) & PAD_TRIGGER_R);
+					LoopyIO::update_pad(Input::PAD_A,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_A			|| PAD_ButtonsHeld(0) & PAD_BUTTON_A);
+					LoopyIO::update_pad(Input::PAD_B,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_B			|| PAD_ButtonsHeld(0) & PAD_BUTTON_B);
+					LoopyIO::update_pad(Input::PAD_C,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_X			|| PAD_ButtonsHeld(0) & PAD_BUTTON_X);
+					LoopyIO::update_pad(Input::PAD_D,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_Y			|| PAD_ButtonsHeld(0) & PAD_BUTTON_Y);
+					LoopyIO::update_pad(Input::PAD_UP,			WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_UP		|| PAD_ButtonsHeld(0) & PAD_BUTTON_UP);
+					LoopyIO::update_pad(Input::PAD_DOWN,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_DOWN		|| PAD_ButtonsHeld(0) & PAD_BUTTON_DOWN);
+					LoopyIO::update_pad(Input::PAD_LEFT,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_LEFT		|| PAD_ButtonsHeld(0) & PAD_BUTTON_LEFT);
+					LoopyIO::update_pad(Input::PAD_RIGHT,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_RIGHT		|| PAD_ButtonsHeld(0) & PAD_BUTTON_RIGHT);
+				#else
+					controller = 0;
+				#endif
+					break;
+
+				case 2:
+				#ifdef HW_RVL
+					#ifdef USE_WIIDRC
+						WiiDRC_ScanPads();
+						const struct WiiDRCData *drcdat = WiiDRC_Data();
+
+						if (drcdat->button & WIIDRC_BUTTON_HOME)
+							closeEmu = true;
+
+						// LoopyIO::update_pad(Input::PAD_PRESENCE,	drcdat->button & WIIDRC_BUTTON_MINUS);
+						LoopyIO::update_pad(Input::PAD_START,		drcdat->button & WIIDRC_BUTTON_PLUS);
+						LoopyIO::update_pad(Input::PAD_L1,			drcdat->button & WIIDRC_BUTTON_L);
+						LoopyIO::update_pad(Input::PAD_R1,			drcdat->button & WIIDRC_BUTTON_R);
+						LoopyIO::update_pad(Input::PAD_A,			drcdat->button & WIIDRC_BUTTON_A);
+						LoopyIO::update_pad(Input::PAD_B,			drcdat->button & WIIDRC_BUTTON_B);
+						LoopyIO::update_pad(Input::PAD_C,			drcdat->button & WIIDRC_BUTTON_X);
+						LoopyIO::update_pad(Input::PAD_D,			drcdat->button & WIIDRC_BUTTON_Y);
+						LoopyIO::update_pad(Input::PAD_UP,			drcdat->button & WIIDRC_BUTTON_UP);
+						LoopyIO::update_pad(Input::PAD_DOWN,		drcdat->button & WIIDRC_BUTTON_DOWN);
+						LoopyIO::update_pad(Input::PAD_LEFT,		drcdat->button & WIIDRC_BUTTON_LEFT);
+						LoopyIO::update_pad(Input::PAD_RIGHT,		drcdat->button & WIIDRC_BUTTON_RIGHT);
+					#else
+						controller = 0;
+					#endif
+				#else
+					controller = 0;
+				#endif
+					break;
 			}
-			#else
-				// LoopyIO::update_pad(Input::PAD_PRESENCE,	PAD_ButtonsHeld(0) & PAD_TRIGGER_Z);
-				LoopyIO::update_pad(Input::PAD_START,		PAD_ButtonsHeld(0) & PAD_BUTTON_START);
-				LoopyIO::update_pad(Input::PAD_L1,			PAD_ButtonsHeld(0) & PAD_TRIGGER_L);
-				LoopyIO::update_pad(Input::PAD_R1,			PAD_ButtonsHeld(0) & PAD_TRIGGER_R);
-				LoopyIO::update_pad(Input::PAD_A,			PAD_ButtonsHeld(0) & PAD_BUTTON_A);
-				LoopyIO::update_pad(Input::PAD_B,			PAD_ButtonsHeld(0) & PAD_BUTTON_B);
-				LoopyIO::update_pad(Input::PAD_C,			PAD_ButtonsHeld(0) & PAD_BUTTON_X);
-				LoopyIO::update_pad(Input::PAD_D,			PAD_ButtonsHeld(0) & PAD_BUTTON_Y);
-				LoopyIO::update_pad(Input::PAD_UP,			PAD_ButtonsHeld(0) & PAD_BUTTON_UP);
-				LoopyIO::update_pad(Input::PAD_DOWN,		PAD_ButtonsHeld(0) & PAD_BUTTON_DOWN);
-				LoopyIO::update_pad(Input::PAD_LEFT,		PAD_ButtonsHeld(0) & PAD_BUTTON_LEFT);
-				LoopyIO::update_pad(Input::PAD_RIGHT,		PAD_ButtonsHeld(0) & PAD_BUTTON_RIGHT);
-			#endif
 		}
 
 		System::shutdown(config);
