@@ -87,7 +87,6 @@ namespace SDL
 		SDL_SetRenderDrawColor(screen.renderer, 0, 0, 0, 255);
 		SDL_RenderClear(screen.renderer);
 		SDL_RenderPresent(screen.renderer);
-		VIDEO_SetBlack(true);
 
 		//Destroy window, then kill SDL2
 		SDL_DestroyTexture(screen.texture);
@@ -238,6 +237,7 @@ int main(int argc, char **argv) {
 	Config::SystemInfo config;
 	std::string bios_name = appPath + "/bios.bin";
 	std::string sound_rom_name = appPath + "/soundbios.bin";
+	std::string rom_name = appPath + "/rom.bin";
 
 	std::ifstream bios_file(bios_name, std::ios::binary);
 	if (!bios_file.is_open())
@@ -246,6 +246,17 @@ int main(int argc, char **argv) {
 	}
 	config.bios_rom.assign(std::istreambuf_iterator<char>(bios_file), {});
 	bios_file.close();
+
+	// Load optional ROM
+	uint8_t autoboot_rom = 0;
+	std::ifstream autoboot_rom_file(rom_name, std::ios::binary);
+	if (autoboot_rom_file.is_open())
+	{
+		config.cart.rom.assign(std::istreambuf_iterator<char>(autoboot_rom_file), {});
+		autoboot_rom_file.close();
+		autoboot_rom = 2;
+		config.cart.sram_file_path = remove_extension(rom_name) + ".sav";
+	}
 
 	// If last argument is given, load the sound ROM
 	std::ifstream sound_rom_file(sound_rom_name, std::ios::binary);
@@ -259,7 +270,6 @@ int main(int argc, char **argv) {
 
 	// Look for ROMs in directory
 	std::vector<std::string> roms;
-	unsigned int rom_selected = 0;
 
 	if (!std::filesystem::is_directory(appPath + "/roms"))
 	{
@@ -275,10 +285,16 @@ int main(int argc, char **argv) {
 	{
 		fatal("no ROMs found in roms directory");
 	}
+	if (roms.size() == 1 && autoboot_rom == 0)
+	{
+		autoboot_rom = 1;
+	}
 
-	bool inMenu = true;
-	bool render = true;
+	bool inMenu = autoboot_rom == 0;
+	bool render = autoboot_rom == 0;
+	unsigned int rom_selected = 0;
 
+	menu:
 	while (SYS_MainLoop() && inMenu)
 	{
 		PAD_ScanPads();
@@ -362,10 +378,14 @@ int main(int argc, char **argv) {
 	} else {
 		PrintHeader();
 
-		std::string cart_name = appPath + "/roms/" + roms[rom_selected] + ".bin";
-		std::ifstream cart_file(cart_name, std::ios::binary);
-		config.cart.rom.assign(std::istreambuf_iterator<char>(cart_file), {});
-		cart_file.close();
+		if (autoboot_rom < 2)
+		{
+			std::string cart_name = appPath + "/roms/" + roms[rom_selected] + ".bin";
+			std::ifstream cart_file(cart_name, std::ios::binary);
+			config.cart.rom.assign(std::istreambuf_iterator<char>(cart_file), {});
+			cart_file.close();
+			config.cart.sram_file_path = remove_extension(cart_name) + ".sav";
+		}
 
 		//Determine the size of SRAM from the cartridge header
 		uint32_t sram_start, sram_end;
@@ -374,7 +394,6 @@ int main(int argc, char **argv) {
 		uint32_t sram_size = Common::bswp32(sram_end) - Common::bswp32(sram_start) + 1;
 
 		//Attempt to load SRAM from a file
-		config.cart.sram_file_path = remove_extension(cart_name) + ".sav";
 		std::ifstream sram_file(config.cart.sram_file_path, std::ios::binary);
 		if (!sram_file.is_open())
 		{
@@ -404,16 +423,32 @@ int main(int argc, char **argv) {
 		while (!shutdown)
 		{
 			PAD_ScanPads();
-			if (PAD_ButtonsHeld(0) & (PAD_BUTTON_START | PAD_TRIGGER_Z)) {
-				exit(0);
-			}
-
 			#ifdef HW_RVL
 			WPAD_ScanPads();
-			if (WPAD_ButtonsHeld(0) & WPAD_BUTTON_HOME) {
-				exit(0);
-			}
+			if (WPAD_ButtonsHeld(0) & WPAD_BUTTON_HOME || PAD_ButtonsHeld(0) & (PAD_BUTTON_START | PAD_TRIGGER_Z)) {
+			#else
+			if (PAD_ButtonsHeld(0) & (PAD_BUTTON_START | PAD_TRIGGER_Z)) {
 			#endif
+				if (autoboot_rom == 0) {
+					System::shutdown(config);
+					SDL::shutdown();
+					inMenu = true;
+					render = true;
+
+					VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_BLACK);
+					VIDEO_Configure(rmode);
+					VIDEO_SetNextFramebuffer(xfb);
+					VIDEO_SetBlack(false);
+					VIDEO_Flush();
+					VIDEO_WaitVSync();
+					if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
+					VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_BLACK);
+
+					goto menu;
+				} else {
+					exit(0);
+				}
+			}
 
 			if (shutdown) {
 				break;
@@ -495,6 +530,7 @@ int main(int argc, char **argv) {
 
 		System::shutdown(config);
 		SDL::shutdown();
+		VIDEO_SetBlack(true);
 
 		if (shutdown) {
 			SYS_ResetSystem(SYS_POWEROFF, 0, 0);

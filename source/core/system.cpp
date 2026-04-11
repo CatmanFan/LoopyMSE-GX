@@ -1,12 +1,16 @@
+#include "core/system.h"
+
+#include "expansion/expansion.h"
 #include "input/input.h"
 #include "sound/sound.h"
 #include "video/video.h"
-#include "core/sh2/sh2.h"
-#include "core/sh2/peripherals/sh2_serial.h"
+#include "printer/printer.h"
+
 #include "core/cart.h"
 #include "core/loopy_io.h"
 #include "core/memory.h"
-#include "core/system.h"
+#include "core/sh2/peripherals/sh2_serial.h"
+#include "core/sh2/sh2.h"
 #include "core/timing.h"
 
 namespace System
@@ -31,6 +35,8 @@ void initialize(Config::SystemInfo& config)
 	Input::initialize();
 	Video::initialize();
 	Sound::initialize(config.sound_rom);
+	Expansion::initialize(config.cart);
+	// Printer::initialize(config);
 
 	//Hook up connections between modules
 	SH2::OCPM::Serial::set_tx_callback(1, &Sound::midi_byte_in);
@@ -39,6 +45,8 @@ void initialize(Config::SystemInfo& config)
 void shutdown(Config::SystemInfo& config)
 {
 	//Shutdown all components in the reverse order they were initialized
+	// Printer::shutdown();
+	Expansion::shutdown();
 	Sound::shutdown();
 	Video::shutdown();
 	Input::shutdown();

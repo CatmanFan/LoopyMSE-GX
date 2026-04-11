@@ -45,7 +45,7 @@ bool enable(uint32_t cart_checksum)
 {
 #ifdef LIMIT_TO_KNOWN_CARTS
 	enabled = EXPANSION_CARTS.count(cart_checksum) > 0;
-	// Log::info("[MSM665] enabled for cart %X? %d\n", cart_checksum, enabled);
+	//printf("[MSM665] enabled for cart %X? %d\n", cart_checksum, enabled);
 #else
 	enabled = true;
 #endif
@@ -76,7 +76,7 @@ void initialize(std::string rom_path_str)
 	}
 	fs::path pcm_path = rom_path / "pcm";
 	if (!fs::is_directory(pcm_path)) return;
-	// Log::debug("[MSM665] found pcm path %s", pcm_path.string().c_str());
+	//printf("[MSM665] found pcm path %s", pcm_path.string().c_str());
 
 	for (auto const& dir_entry : std::filesystem::directory_iterator(pcm_path))
 	{
@@ -103,31 +103,31 @@ void option_set(uint8_t data)
 	op_a |= (data >> 3) & 0x1;
 	computed_volume = (op_v ? 0.5f : 1.0f) * SDL_powf(0.5f, vc_vl);
 
-	// Log::trace("[MSM665] option_set 0x%X op_v=%d op_s=%d op_a=%d", data, op_v, op_s, op_a);
+	//printf("[MSM665] option_set 0x%X op_v=%d op_s=%d op_a=%d", data, op_v, op_s, op_a);
 
-	// Log::debug("[MSM665] Option set VOL=%s STANDBY=%s AOUT=%s", op_v ? "HALF" : "FULL", op_s ? "N" : "Y", op_a ? "DAC" : "LPF");
+	//printf("[MSM665] Option set VOL=%s STANDBY=%s AOUT=%s", op_v ? "HALF" : "FULL", op_s ? "N" : "Y", op_a ? "DAC" : "LPF");
 	if (!op_s)
 	{
-		// Log::warn("[MSM665] Standby not implemented");
+		//printf("[MSM665] Standby not implemented");
 	}
 }
 
 void voice_control(uint8_t data)
 {
-	static const char* const VOLUME_STRS[] = {"0dB", "-6dB", "-12dB", "-18dB"};
-	static const char* const REPEAT_STRS[] = {"1", "2", "4", "INF"};
+	// static const char* const VOLUME_STRS[] = {"0dB", "-6dB", "-12dB", "-18dB"};
+	// static const char* const REPEAT_STRS[] = {"1", "2", "4", "INF"};
 
 	vc_vl = data & 0x3;
 	vc_rp = (data >> 2) & 0x3;
 	vc_sm = (data >> 4) & 0x1;
-	// Log::trace("[MSM665] voice_control 0x%X vc_vl=%d vc_rp=%d vc_sm=%d", data, vc_vl, vc_rp, vc_sm);
+	//printf("[MSM665] voice_control 0x%X vc_vl=%d vc_rp=%d vc_sm=%d", data, vc_vl, vc_rp, vc_sm);
 
 	computed_volume = (op_v ? 0.5f : 1.0f) * SDL_powf(0.5f, vc_vl);
 	// self.computed_volume = (0.5 if self.op_v else 1.0) * pow(0.5, self.vc_vl)
-	// Log::debug("[MSM665] Voice control set VOL=%s REPEAT=%s SMOOTH=%s", VOLUME_STRS[vc_vl], REPEAT_STRS[vc_rp], vc_sm ? "Y" : "N");
+	//printf("[MSM665] Voice control set VOL=%s REPEAT=%s SMOOTH=%s", VOLUME_STRS[vc_vl], REPEAT_STRS[vc_rp], vc_sm ? "Y" : "N");
 	if (vc_rp || vc_sm)
 	{
-		// Log::warn("[MSM665] repeat/smooth not implemented");
+		//printf("[MSM665] repeat/smooth not implemented");
 	}
 }
 
@@ -167,19 +167,19 @@ void write8(uint32_t addr, uint8_t value)
 		{
 			// OKI sounds are 1-indexed
 			int index = data - 1;
-			if (index >= 0 && index < wavs.size())
+			if (index >= 0 && index < (int)wavs.size())
 			{
-				// Log::debug("[MSM665] Play sample %d", data);
+				//printf("[MSM665] Play sample %d", data);
 				Sound::wav_queue(wavs[index].string(), computed_volume * WAV_MIX_SCALE);
 			}
 			else
 			{
-				// Log::warn("[MSM665] Sample %d out of range [1-%d]", index, wavs.size());
+				//printf("[MSM665] Sample %d out of range [1-%d]", index, wavs.size());
 			}
 		}
 		else
 		{
-			// Log::debug("[MSM665] Stop");
+			//printf("[MSM665] Stop");
 			Sound::wav_stop();
 		}
 	}

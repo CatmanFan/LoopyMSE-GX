@@ -19,6 +19,7 @@ Game support notes:
 #define LOOPYMSE__SOUND
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace Sound
@@ -32,14 +33,14 @@ constexpr static int TARGET_SAMPLE_RATE = 48000;
 constexpr static int TARGET_BUFFER_SIZE = 2048;
 
 // Time reference to smooth out audio timing at larger buffer sizes. Assumes consistent CPU timing.
-constexpr static int TIMEREF_FREQUENCY = 100;
+// Ideally should be a multiple of the video framerate for frame-dependent sound events to sync well.
+constexpr static int TIMEREF_FREQUENCY = 240;
 constexpr static bool TIMEREF_ENABLE = TIMEREF_FREQUENCY > (TARGET_SAMPLE_RATE / TARGET_BUFFER_SIZE);
 
 // Fade up/down time in milliseconds when sound is muted e.g. by minimizing the window.
 constexpr static int MUTE_FADE_MS = 20;
 
 // Audio synthesis parameters in loopysound.h.
-
 
 void initialize(std::vector<uint8_t>& sound_rom);
 void shutdown();
@@ -57,6 +58,9 @@ void ctrl_write32(uint32_t addr, uint32_t value);
 void midi_byte_in(uint8_t value);
 void set_mute(bool mute_in);
 
-}
+void wav_queue(std::string path, float volume);
+void wav_stop();
+
+}  // namespace Sound
 
 #endif

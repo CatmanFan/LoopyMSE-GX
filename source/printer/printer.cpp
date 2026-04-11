@@ -72,13 +72,13 @@ void show_print_file(fs::path print_path)
 #endif
 		if (has_command)
 		{
-			// Log::info("[Printer] trying to open print in default viewer...");
+			//printf("[Printer] trying to open print in default viewer...");
 			std::thread t1(system_threadwrapper, cmd.str());
 			t1.detach();
 		}
 		else
 		{
-			// Log::info("[Printer] default viewer not supported on this platform");
+			//printf("[Printer] default viewer not supported on this platform");
 		}
 		return;
 	}
@@ -107,7 +107,7 @@ void show_print_file(fs::path print_path)
 		cmd << " " << print_path_quoted;
 	}
 
-	// Log::info("[Printer] trying to open print with your specified view command...");
+	//printf("[Printer] trying to open print with your specified view command...");
 	std::thread t1(system_threadwrapper, cmd.str());
 	t1.detach();
 }
@@ -132,7 +132,7 @@ bool motor_move_hook(uint32_t addr)
 	if (addr != ADDR_MOTOR_MOVE) return false;
 
 	//Go to end of function (rts / _nop) skipping this instruction
-	// Log::info("[Printer] skipping motor move...");
+	//printf("[Printer] skipping motor move...");
 	sh2.pc = ADDR_MOTOR_MOVE_RETURN;
 	sh2.pipeline_valid = false;
 	return true;
@@ -153,7 +153,7 @@ bool print_hook(uint32_t addr)
 	uint32_t p6_format = Bus::read8(Bus::read32(sp + 4));
 	uint32_t p7_unk = Bus::read32(sp + 8);
 	uint32_t p8_first = Bus::read32(sp + 12);
-	// Log::debug("[Printer] data=%08X, palette=%08X, dims=%08X, unkp4=%08X, unkp5=%08X, format=%02X, unkp7=%08X, first=%d",
+	//printf("[Printer] data=%08X, palette=%08X, dims=%08X, unkp4=%08X, unkp5=%08X, format=%02X, unkp7=%08X, first=%d",
 		// p1_data, p2_palette, p3_dims, p4_unk, p5_unk, p6_format, p7_unk, p8_first);
 
 	if (output_dir.empty())
@@ -178,7 +178,7 @@ bool print_hook(uint32_t addr)
 	//TODO: is there more complex logic to this?
 	height = std::min(height, (uint32_t)(pixel_double == 1 ? 112 : 224));
 
-	// Log::info("[Printer] size=%dx%d, pixel_format=%d, pixel_double=%d", width, height, pixel_format, pixel_double);
+	//printf("[Printer] size=%dx%d, pixel_format=%d, pixel_double=%d", width, height, pixel_format, pixel_double);
 
 	if ((pixel_double == 0 || pixel_double == 1) && (pixel_format == 1 || pixel_format == 3))
 	{
@@ -243,7 +243,7 @@ bool print_hook(uint32_t addr)
 		if (print_success)
 		{
 			last_printed_path = print_path;
-			// Log::info("[Printer] saved print to %s", print_name.string().c_str());
+			//printf("[Printer] saved print to %s", print_name.string().c_str());
 			if (!DELAYED_RETURN)
 			{
 				show_print_file(print_path);
@@ -251,12 +251,12 @@ bool print_hook(uint32_t addr)
 		}
 		else
 		{
-			// Log::warn("[Printer] failed to open %s", print_name.string().c_str());
+			//printf("[Printer] failed to open %s", print_name.string().c_str());
 		}
 	}
 	else
 	{
-		// Log::warn("[Printer] unknown mode, aborting");
+		//printf("[Printer] unknown mode, aborting");
 		print_success = false;
 	}
 
@@ -312,7 +312,7 @@ void initialize(Config::SystemInfo& config)
 	{
 		SH2::add_hook(ADDR_PRINT_RETURN - 2, &print_return_hook);
 	}
-	// Log::debug("[Printer] registered hooks for print and motor-move BIOS calls");
+	//printf("[Printer] registered hooks for print and motor-move BIOS calls");
 }
 
 void shutdown()
@@ -325,7 +325,7 @@ void shutdown()
 	{
 		SH2::remove_hook(ADDR_PRINT_RETURN - 2);
 	}
-	// Log::debug("[Printer] unregistered hooks");
+	//printf("[Printer] unregistered hooks");
 }
 
 }  // namespace Printer

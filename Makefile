@@ -20,6 +20,7 @@ BUILD		:=	build
 SOURCES		:=	source \
 				source/common \
 				source/core source/core/sh2 source/core/sh2/peripherals \
+				source/expansion source/expansion/msm665x \
 				source/input \
 				source/sound \
 				source/video
@@ -27,6 +28,7 @@ DATA		:=
 INCLUDES	:=	include \
 				include/common \
 				include/core include/core/sh2 include/core/sh2/peripherals \
+				include/expansion include/expansion/msm665x \
 				include/input \
 				include/sound \
 				include/video
