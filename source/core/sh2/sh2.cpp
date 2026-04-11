@@ -10,6 +10,7 @@
 #include "core/sh2/sh2.h"
 #include "core/sh2/sh2_bus.h"
 #include "core/sh2/sh2_interpreter.h"
+#include "core/sh2/sh2_dynarec.h"
 #include "core/sh2/sh2_local.h"
 #include "core/memory.h"
 #include "core/timing.h"
@@ -124,10 +125,13 @@ void initialize()
 	// OCPM::PFC::initialize();
 	OCPM::Serial::initialize();
 	OCPM::Timer::initialize();
+
+	// SH2::Dynarec::initialize();
 }
 
 void shutdown()
 {
+	// SH2::Dynarec::shutdown();
 	sh2.hooks.clear();
 }
 
@@ -184,6 +188,7 @@ void run()
 			bool was_nointerrupt_slot = sh2.in_nointerrupt_slot;
 			if (execute_valid)
 			{
+				// SH2::Dynarec::run(execute_instruction, execute_src_addr);
 				SH2::Interpreter::run(execute_instruction, execute_src_addr);
 			}
 			//This should probably be done more directly in the interpreter
