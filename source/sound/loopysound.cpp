@@ -203,7 +203,7 @@ void UPD937_Core::process_midi_now(char midi_byte)
 						else note_off(channel, midi_param_bytes[0]);
 						break;
 					case 0xA:
-						printf("[Sound] unhandled message KEY PRESSURE\n");
+						//printf("[Sound] unhandled message KEY PRESSURE\n");
 						break;
 					case 0xB:
 						if(midi_param_bytes[0] == 0x40)
@@ -212,14 +212,14 @@ void UPD937_Core::process_midi_now(char midi_byte)
 						}
 						else
 						{
-							printf("[Sound] unhandled message CONTROL CHANGE %02X %02X\n", midi_param_bytes[0], midi_param_bytes[1]);
+							//printf("[Sound] unhandled message CONTROL CHANGE %02X %02X\n", midi_param_bytes[0], midi_param_bytes[1]);
 						}
 						break;
 					case 0xC:
 						prog_chg(channel, midi_param_bytes[0]);
 						break;
 					case 0xD:
-						printf("[Sound] unhandled message CHANNEL PRESSURE\n");
+						//printf("[Sound] unhandled message CHANNEL PRESSURE\n");
 						break;
 					case 0xE:
 						pitch_bend(channel, (midi_param_bytes[1]<<1) | (midi_param_bytes[1]>>6));
@@ -647,11 +647,11 @@ LoopySound::LoopySound(std::vector<uint8_t>& rom_in, float out_rate, int buffer_
 	this->synth_rate = TUNING * 192;
 	this->mix_level = MIX_LEVEL;
 	this->buffer_size = buffer_size;
-	printf("[Sound] Init uPD937 core: synth rate %.01f, out rate %.01f, buffer size %d\n", synth_rate, out_rate, buffer_size);
+	//printf("[Sound] Init uPD937 core: synth rate %.01f, out rate %.01f, buffer size %d\n", synth_rate, out_rate, buffer_size);
 	synth = std::make_unique<UPD937_Core>(rom_in, synth_rate);
 	if(FILTER_ENABLE)
 	{
-		printf("[Sound] Init filters\n");
+		//printf("[Sound] Init filters\n");
 		filter_tone = std::make_unique<BiquadStereoFilter>(synth_rate, FILTER_CUTOFF, FILTER_RESONANCE, false);
 		filter_block_dc = std::make_unique<BiquadStereoFilter>(out_rate, 20.f, 0.7f, true);
 	}
@@ -785,7 +785,7 @@ bool LoopySound::enqueue_midi_byte(char midi_byte, int timestamp)
 	if((queue_write + 1) % MIDI_QUEUE_CAPACITY == queue_read)
 	{
 		if(!midi_overflowed) {
-			printf("[Sound] MIDI queue overflow, increase queue capacity or send smaller groups more often.\n");
+			//printf("[Sound] MIDI queue overflow, increase queue capacity or send smaller groups more often.\n");
 		}
 
 		midi_overflowed = true;

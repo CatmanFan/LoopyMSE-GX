@@ -35,11 +35,10 @@ INCLUDES	:=	include \
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS	=  `$(PREFIX)pkg-config --cflags sdl2` -g -O1 -Wall $(MACHDEP) $(INCLUDE) \
-			-Wno-format-truncation \
-			-DWII_BIN2O
-CXXFLAGS	=	$(CFLAGS)
-
+CFLAGS	=  `$(PREFIX)pkg-config --cflags sdl2` -g -Ofast -mrvl -Wall $(MACHDEP) $(INCLUDE) \
+			-DWII_BIN2O -DHW_RVL -DUSE_WIIDRC
+CXXFLAGS	=	$(CFLAGS) -fno-exceptions -fno-rtti
+ 
 LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 
 #---------------------------------------------------------------------------------

@@ -10,7 +10,12 @@
 #include <unistd.h>
 
 #include <gccore.h>
+#ifdef HW_RVL
 #include <wiiuse/wpad.h>
+#endif
+#ifdef USE_WIIDRC
+#include "wiidrc/wiidrc.h"
+#endif
 #include <asndlib.h>
 #include <fat.h>
 #include <sdcard/wiisd_io.h>
@@ -20,7 +25,6 @@
 #include <filesystem>
 
 #include <SDL2/SDL.h>
-
 #include "common/bswp.h"
 #include "core/config.h"
 #include "core/loopy_io.h"
@@ -45,16 +49,15 @@ namespace SDL
 
 	bool initialize()
 	{
-		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER) < 0)
+		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
 		{
 			printf("SDL2 error: %s\n", SDL_GetError());
 			return false;
 		}
 
 		//Try synchronizing drawing to VBLANK
-		SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-		// SDL_SetHint("SDL_JOYSTICK_HIDAPI_WII", "1");
- 
+		// SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
+
 		// make sure SDL cleans up before exit
 		atexit(SDL_Quit);
 		SDL_ShowCursor(SDL_DISABLE);
@@ -64,7 +67,7 @@ namespace SDL
 			"Rupi",
 			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			640, 480,
-			SDL_WINDOW_SHOWN
+			0
 		);
 		if (!screen.window) {
 			printf("SDL_CreateWindow error: %s\n", SDL_GetError());
@@ -154,16 +157,16 @@ static bool initFat() {
 	return true;
 }
 
-static bool shutdown = false;
+static bool shutdown = false, reset = false;
 
 static void cbShutdown() { shutdown = true; }
 static void cbShutdownWpad(s32 chan) { shutdown = true; }
-static void cbReset(u32 chan, void* arg) { exit(0); }
+static void cbReset(u32 chan, void* arg) { reset = true; }
 
 static void fatal(const char *txt)
 {
-	printf("HALT: %s, exiting in 5 seconds\n", txt);
-	// perror("msg");
+	perror("HALT");
+	printf("      %s, exiting in 5 seconds\n", txt);
 	sleep(5);
 	exit(0);
 }
@@ -176,8 +179,6 @@ static void CreateAppPath(std::string file_path)
 		appPath = "sd:/apps/LoopyMSE-GX";
 	else
 		appPath = file_path.substr(0, pos - 4);
-
-	printf("Running from %s\n", appPath.c_str());
 }
 
 static void PrintHeader()
@@ -195,25 +196,30 @@ int main(int argc, char **argv) {
 
 	// This function initialises the attached controllers
 	PAD_Init();
+	SYS_SetPowerCallback(cbShutdown);
+	SYS_SetResetCallback(cbReset);
 
+	#ifdef HW_RVL
 	WPAD_Init();
 	// Enable all buttons and accelerometer for all connected controllers
 	WPAD_SetDataFormat(WPAD_CHAN_ALL, WPAD_FMT_BTNS_ACC_IR);
-
-	SYS_SetPowerCallback(cbShutdown);
 	WPAD_SetPowerButtonCallback(cbShutdownWpad);
-	SYS_SetResetCallback(cbReset);
+	#endif
+
+	#ifdef USE_WIIDRC
+	WiiDRC_Init();
+	bool hasDRC = WiiDRC_Inited() && WiiDRC_Connected();
+	#endif
 
 	// Initialise the console
 	GXRModeObj *rmode = VIDEO_GetPreferredMode(NULL);
 	void *xfb = MEM_K0_TO_K1(SYS_AllocateFramebuffer(rmode));
 	console_init(xfb,20,20,rmode->fbWidth,rmode->xfbHeight,rmode->fbWidth*VI_DISPLAY_PIX_SZ);
+	VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_BLACK);
 	VIDEO_Configure(rmode);
 	VIDEO_SetNextFramebuffer(xfb);
 	VIDEO_SetBlack(false);
 	VIDEO_Flush();
-
-	// Wait for Video setup to complete
 	VIDEO_WaitVSync();
 	if(rmode->viTVMode&VI_NON_INTERLACE) VIDEO_WaitVSync();
 	VIDEO_ClearFrameBuffer(rmode, xfb, COLOR_BLACK);
@@ -225,11 +231,9 @@ int main(int argc, char **argv) {
 		fatal("failed to init libfat");
 	}
 
-	#ifdef HW_RVL
 	// store path app was loaded from
-	if(argc > 0 && argv[0] != NULL)
-		CreateAppPath(argv[0]);
-	#endif
+	CreateAppPath(argc > 0 && argv[0] != NULL ? argv[0] : "sd:/apps/LoopyMSE-GX/boot.dol");
+	printf("Running from %s\n", appPath.c_str());
 
 	Config::SystemInfo config;
 	std::string bios_name = appPath + "/bios.bin";
@@ -279,32 +283,70 @@ int main(int argc, char **argv) {
 	{
 		PAD_ScanPads();
 
+		#ifdef HW_RVL
 		WPAD_ScanPads();
-		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_UP || PAD_ButtonsDown(0) & PAD_BUTTON_UP) {
+		#ifdef USE_WIIDRC
+			WiiDRC_ScanPads();
+			const struct WiiDRCData *drcdat = WiiDRC_Data();
+			if ((hasDRC && drcdat->button & WIIDRC_BUTTON_UP) || WPAD_ButtonsDown(0) & WPAD_BUTTON_UP || PAD_ButtonsDown(0) & PAD_BUTTON_UP) {
+		#else
+			if (WPAD_ButtonsDown(0) & WPAD_BUTTON_UP || PAD_ButtonsDown(0) & PAD_BUTTON_UP) {
+		#endif
+		#else
+		if (PAD_ButtonsDown(0) & PAD_BUTTON_UP) {
+		#endif
 			render = true;
 			rom_selected--;
 			if (rom_selected < 0 || rom_selected >= roms.size())
 				rom_selected = roms.size() - 1;
 		}
 
-		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_DOWN || PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) {
+		#ifdef HW_RVL
+		#ifdef USE_WIIDRC
+			if ((hasDRC && drcdat->button & WIIDRC_BUTTON_DOWN) || WPAD_ButtonsDown(0) & WPAD_BUTTON_DOWN || PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) {
+		#else
+			if (WPAD_ButtonsDown(0) & WPAD_BUTTON_DOWN || PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) {
+		#endif
+		#else
+		if (PAD_ButtonsDown(0) & PAD_BUTTON_DOWN) {
+		#endif
 			render = true;
 			rom_selected++;
 			if (rom_selected >= roms.size())
 				rom_selected = 0;
 		}
 
+		#ifdef HW_RVL
+		#ifdef USE_WIIDRC
+			if ((hasDRC && drcdat->button & WIIDRC_BUTTON_A) || WPAD_ButtonsDown(0) & WPAD_BUTTON_A || PAD_ButtonsDown(0) & PAD_BUTTON_A) {
+		#else
 		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_A || PAD_ButtonsDown(0) & PAD_BUTTON_A) {
+		#endif
+		#else
+		if (PAD_ButtonsDown(0) & PAD_BUTTON_A) {
+		#endif
 			inMenu = false;
 		}
 
-		if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME || PAD_ButtonsDown(0) & PAD_BUTTON_B) {
+		#ifdef HW_RVL
+		#ifdef USE_WIIDRC
+			if ((hasDRC && drcdat->button & WIIDRC_BUTTON_HOME) || WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME || PAD_ButtonsDown(0) & PAD_BUTTON_B || reset) {
+		#else
+			if (WPAD_ButtonsDown(0) & WPAD_BUTTON_HOME || PAD_ButtonsDown(0) & PAD_BUTTON_B || reset) {
+		#endif
+		#else
+		if (PAD_ButtonsDown(0) & PAD_BUTTON_B || reset) {
+		#endif
 			break;
 		}
 
 		if (render) {
 			PrintHeader();
-			printf("Up/Down to select a ROM, A to launch, HOME (Wiimote) or B (GC) to exit\n\n");
+			#ifdef HW_RVL
+				printf("Up/Down to navigate, A to select, HOME (Wiimote) or Start+Z (GC) to exit\n\n");
+			#else
+				printf("Up/Down to navigate, A to select, Start+Z to exit\n\n");
+			#endif
 			for (unsigned int i = 0; i < roms.size(); i++) {
 				if (i == rom_selected)	{ printf("> "); }
 				else					{ printf("  "); }
@@ -359,30 +401,62 @@ int main(int argc, char **argv) {
 		if (!SDL::initialize())
 			fatal("failed to init SDL");
 
-		while (SYS_MainLoop())
+		while (!shutdown)
 		{
 			PAD_ScanPads();
+			if (PAD_ButtonsHeld(0) & (PAD_BUTTON_START | PAD_TRIGGER_Z)) {
+				exit(0);
+			}
 
+			#ifdef HW_RVL
 			WPAD_ScanPads();
 			if (WPAD_ButtonsHeld(0) & WPAD_BUTTON_HOME) {
 				exit(0);
 			}
+			#endif
 
 			if (shutdown) {
 				break;
 			}
 
+			if (reset) {
+				printf("Rebooting Loopy...\n");
+				System::shutdown(config);
+				System::initialize(config);
+				reset = false;
+			}
+
 			System::run();
 			SDL::update(System::get_display_output());
 
+			#ifdef HW_RVL
 			WPADData* data_wpad = WPAD_Data(0);
+			#ifdef USE_WIIDRC
+			WiiDRC_ScanPads();
+			const struct WiiDRCData *drcdat = WiiDRC_Data();
+			if (hasDRC) {
+				// LoopyIO::update_pad(Input::PAD_PRESENCE,	drcdat->button & WIIDRC_BUTTON_MINUS);
+				LoopyIO::update_pad(Input::PAD_START,		drcdat->button & WIIDRC_BUTTON_PLUS);
+				LoopyIO::update_pad(Input::PAD_L1,			drcdat->button & WIIDRC_BUTTON_L);
+				LoopyIO::update_pad(Input::PAD_R1,			drcdat->button & WIIDRC_BUTTON_R);
+				LoopyIO::update_pad(Input::PAD_A,			drcdat->button & WIIDRC_BUTTON_A);
+				LoopyIO::update_pad(Input::PAD_B,			drcdat->button & WIIDRC_BUTTON_B);
+				LoopyIO::update_pad(Input::PAD_C,			drcdat->button & WIIDRC_BUTTON_X);
+				LoopyIO::update_pad(Input::PAD_D,			drcdat->button & WIIDRC_BUTTON_Y);
+				LoopyIO::update_pad(Input::PAD_UP,			drcdat->button & WIIDRC_BUTTON_UP);
+				LoopyIO::update_pad(Input::PAD_DOWN,		drcdat->button & WIIDRC_BUTTON_DOWN);
+				LoopyIO::update_pad(Input::PAD_LEFT,		drcdat->button & WIIDRC_BUTTON_LEFT);
+				LoopyIO::update_pad(Input::PAD_RIGHT,		drcdat->button & WIIDRC_BUTTON_RIGHT);
+			} else if (data_wpad->exp.type != WPAD_EXP_CLASSIC) {
+			#else
 			if (data_wpad->exp.type != WPAD_EXP_CLASSIC) {
+			#endif
 				// LoopyIO::update_pad(Input::PAD_PRESENCE,	WPAD_ButtonsHeld(0) & WPAD_BUTTON_MINUS				|| PAD_ButtonsHeld(0) & PAD_TRIGGER_Z);
 				LoopyIO::update_pad(Input::PAD_START,		WPAD_ButtonsHeld(0) & WPAD_BUTTON_PLUS				|| PAD_ButtonsHeld(0) & PAD_BUTTON_START);
 				LoopyIO::update_pad(Input::PAD_L1,			WPAD_ButtonsHeld(0) & WPAD_NUNCHUK_BUTTON_Z			|| PAD_ButtonsHeld(0) & PAD_TRIGGER_L);
 				LoopyIO::update_pad(Input::PAD_R1,			WPAD_ButtonsHeld(0) & WPAD_NUNCHUK_BUTTON_C			|| PAD_ButtonsHeld(0) & PAD_TRIGGER_R);
-				LoopyIO::update_pad(Input::PAD_A,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_1					|| PAD_ButtonsHeld(0) & PAD_BUTTON_A);
-				LoopyIO::update_pad(Input::PAD_B,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_2					|| PAD_ButtonsHeld(0) & PAD_BUTTON_B);
+				LoopyIO::update_pad(Input::PAD_A,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_2					|| PAD_ButtonsHeld(0) & PAD_BUTTON_A);
+				LoopyIO::update_pad(Input::PAD_B,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_1					|| PAD_ButtonsHeld(0) & PAD_BUTTON_B);
 				LoopyIO::update_pad(Input::PAD_C,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_A					|| PAD_ButtonsHeld(0) & PAD_BUTTON_X);
 				LoopyIO::update_pad(Input::PAD_D,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_B					|| PAD_ButtonsHeld(0) & PAD_BUTTON_Y);
 				LoopyIO::update_pad(Input::PAD_UP,			WPAD_ButtonsHeld(0) & WPAD_BUTTON_RIGHT				|| PAD_ButtonsHeld(0) & PAD_BUTTON_UP);
@@ -403,10 +477,28 @@ int main(int argc, char **argv) {
 				LoopyIO::update_pad(Input::PAD_LEFT,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_LEFT		|| PAD_ButtonsHeld(0) & PAD_BUTTON_LEFT);
 				LoopyIO::update_pad(Input::PAD_RIGHT,		WPAD_ButtonsHeld(0) & WPAD_CLASSIC_BUTTON_RIGHT		|| PAD_ButtonsHeld(0) & PAD_BUTTON_RIGHT);
 			}
+			#else
+				// LoopyIO::update_pad(Input::PAD_PRESENCE,	PAD_ButtonsHeld(0) & PAD_TRIGGER_Z);
+				LoopyIO::update_pad(Input::PAD_START,		PAD_ButtonsHeld(0) & PAD_BUTTON_START);
+				LoopyIO::update_pad(Input::PAD_L1,			PAD_ButtonsHeld(0) & PAD_TRIGGER_L);
+				LoopyIO::update_pad(Input::PAD_R1,			PAD_ButtonsHeld(0) & PAD_TRIGGER_R);
+				LoopyIO::update_pad(Input::PAD_A,			PAD_ButtonsHeld(0) & PAD_BUTTON_A);
+				LoopyIO::update_pad(Input::PAD_B,			PAD_ButtonsHeld(0) & PAD_BUTTON_B);
+				LoopyIO::update_pad(Input::PAD_C,			PAD_ButtonsHeld(0) & PAD_BUTTON_X);
+				LoopyIO::update_pad(Input::PAD_D,			PAD_ButtonsHeld(0) & PAD_BUTTON_Y);
+				LoopyIO::update_pad(Input::PAD_UP,			PAD_ButtonsHeld(0) & PAD_BUTTON_UP);
+				LoopyIO::update_pad(Input::PAD_DOWN,		PAD_ButtonsHeld(0) & PAD_BUTTON_DOWN);
+				LoopyIO::update_pad(Input::PAD_LEFT,		PAD_ButtonsHeld(0) & PAD_BUTTON_LEFT);
+				LoopyIO::update_pad(Input::PAD_RIGHT,		PAD_ButtonsHeld(0) & PAD_BUTTON_RIGHT);
+			#endif
 		}
 
-		System::shutdown();
+		System::shutdown(config);
 		SDL::shutdown();
+
+		if (shutdown) {
+			SYS_ResetSystem(SYS_POWEROFF, 0, 0);
+		}
 	}
 
 	return 0;
