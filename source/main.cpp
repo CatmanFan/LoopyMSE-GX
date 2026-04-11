@@ -20,7 +20,6 @@
 #include <filesystem>
 
 #include <SDL2/SDL.h>
-#include <SDL2/sdl_image.h>
 
 #include "common/bswp.h"
 #include "core/config.h"
@@ -184,7 +183,7 @@ static void CreateAppPath(std::string file_path)
 static void PrintHeader()
 {
     printf("\033[2J\033[H"); // Clear screen
-	printf("LoopyMSE-GX v0.1                                Casio Loopy emulator for Wii\n");
+	printf("LoopyMSE-GX v0.1 (experimental)                 Casio Loopy emulator for Wii\n");
 	printf("____________________________________________________________________________\n\n");
 }
 

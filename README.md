@@ -1,5 +1,5 @@
 ## LoopyMSE-GX
-A work-in-progress fork of [LoopyMSE](https://github.com/LoopyMSE/LoopyMSE) (Casio Loopy emulator) for the Wii/GameCube. Only compatible with unofficial homebrew games (i.e. not *commercial* games) for the time being.
+An experimental fork of [LoopyMSE](https://github.com/LoopyMSE/LoopyMSE) (Casio Loopy emulator) for the Wii/GameCube. Note that performance is still very slow on account of SDL(2).
 
 Credits to PSI, kasami and partlyhuman for their work on the original emulator.
 
