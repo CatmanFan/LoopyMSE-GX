@@ -434,7 +434,7 @@ int main(int argc, char **argv) {
 		Sound::set_mute(false);
 
 		//All subprojects have been initialized, so it is safe to reference them now
-		if (!SDL::initialize(true))
+		if (!SDL::initialize())
 			fatal("failed to init SDL");
 
 	#ifdef HW_RVL
@@ -492,8 +492,8 @@ int main(int argc, char **argv) {
 			}
 
 			System::run();
-			VIDEO_WaitVSync();
-			// SDL::update(System::get_display_output());
+			// VIDEO_WaitVSync();
+			SDL::update(System::get_display_output());
 
 			switch (controller)
 			{
