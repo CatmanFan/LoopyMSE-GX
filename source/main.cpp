@@ -43,72 +43,81 @@ namespace SDL
 		SDL_Window* window;
 		SDL_Renderer* renderer;
 		SDL_Texture* texture;
+
 	};
 
+	void* buffer;
+
 	static Screen screen;
+	lwp_t thread = LWP_THREAD_NULL;
+	static void* update(void *arg)
+	{
+		while (1) {
+			// Clear screen
+			SDL_SetRenderDrawColor(screen.renderer, 15, 15, 15, 255);
+			SDL_RenderClear(screen.renderer);
+
+			if (buffer != nullptr) {
+				// Draw screen
+				SDL_UpdateTexture(screen.texture, NULL, buffer, sizeof(uint16_t) * DISPLAY_WIDTH);
+				// SDL_Rect dest = {640 / 2 - (DISPLAY_WIDTH / 2), 480 / 2 - (DISPLAY_HEIGHT / 2), DISPLAY_WIDTH, DISPLAY_HEIGHT};
+				SDL_RenderCopy(screen.renderer, screen.texture, NULL, NULL);
+			}
+
+			SDL_RenderPresent(screen.renderer);
+
+			// Return to caller, don't waste time waiting for vb
+			LWP_SuspendThread(thread);
+		}
+		return nullptr;
+	}
 
 	bool initialize()
 	{
-		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
-		{
-			printf("SDL2 error: %s\n", SDL_GetError());
-			return false;
+		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == 0) {
+			// make sure SDL cleans up before exit
+			atexit(SDL_Quit);
+			SDL_ShowCursor(SDL_DISABLE);
+
+			// create a new window
+			screen.window = SDL_CreateWindow("Rupi", 0, 0, 640, 480, SDL_WINDOW_SHOWN);
+			if (!screen.window) {
+				printf("SDL_CreateWindow error: %s\n", SDL_GetError());
+				return false;
+			}
+			screen.renderer = SDL_CreateRenderer(screen.window, -1, SDL_RENDERER_ACCELERATED);
+			if (!screen.renderer) {
+				printf("SDL_CreateRenderer error: %s\n", SDL_GetError());
+				return false;
+			}
+			screen.texture = SDL_CreateTexture(screen.renderer, SDL_PIXELFORMAT_ARGB1555, SDL_TEXTUREACCESS_STREAMING, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+
+			LWP_CreateThread (&thread, update, NULL, NULL, 24576, 70);
+			return true;
 		}
 
-		//Try synchronizing drawing to VBLANK
-		// SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
-
-		// make sure SDL cleans up before exit
-		atexit(SDL_Quit);
-		SDL_ShowCursor(SDL_DISABLE);
-
-		// create a new window
-		screen.window = SDL_CreateWindow(
-			"Rupi",
-			SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-			640, 480,
-			0
-		);
-		if (!screen.window) {
-			printf("SDL_CreateWindow error: %s\n", SDL_GetError());
-			return false;
-		}
-		screen.renderer = SDL_CreateRenderer(screen.window, -1, SDL_RENDERER_ACCELERATED);
-		if (!screen.renderer) {
-			printf("SDL_CreateRenderer error: %s\n", SDL_GetError());
-			return false;
-		}
-
-		screen.texture = SDL_CreateTexture(screen.renderer, SDL_PIXELFORMAT_ARGB1555, SDL_TEXTUREACCESS_STREAMING, DISPLAY_WIDTH, DISPLAY_HEIGHT);
-		return true;
+		printf("SDL2 error: %s\n", SDL_GetError());
+		return false;
 	}
 
-	void shutdown() {
-		SDL_SetRenderDrawColor(screen.renderer, 0, 0, 0, 255);
-		SDL_RenderClear(screen.renderer);
-		SDL_RenderPresent(screen.renderer);
-
-		//Destroy window, then kill SDL2
-		SDL_DestroyTexture(screen.texture);
-		SDL_DestroyRenderer(screen.renderer);
-		SDL_DestroyWindow(screen.window);
-
-		SDL_Quit();
-	}
-
-	void update(uint16_t* display_output)
+	void shutdown()
 	{
-		// Clear screen
-		SDL_SetRenderDrawColor(screen.renderer, 15, 15, 15, 255);
-		SDL_RenderClear(screen.renderer);
+		if (!LWP_ThreadIsSuspended(thread)) {
+			LWP_SuspendThread(thread);
 
-		// Draw screen
-		SDL_UpdateTexture(screen.texture, NULL, display_output, sizeof(uint16_t) * DISPLAY_WIDTH);
-		// SDL_Rect dest = {640 / 2 - (DISPLAY_WIDTH / 2), 480 / 2 - (DISPLAY_HEIGHT / 2), DISPLAY_WIDTH, DISPLAY_HEIGHT};
-		SDL_RenderCopy(screen.renderer, screen.texture, NULL, NULL);
-		SDL_RenderPresent(screen.renderer);
+			SDL_SetRenderDrawColor(screen.renderer, 0, 0, 0, 255);
+			SDL_RenderClear(screen.renderer);
+			SDL_RenderPresent(screen.renderer);
+
+			//Destroy window, then kill SDL2
+			SDL_DestroyTexture(screen.texture);
+			SDL_DestroyRenderer(screen.renderer);
+			SDL_DestroyWindow(screen.window);
+
+			SDL_Quit();
+		}
 	}
-}
+};
 
 static std::string devicePrefix;
 
@@ -358,6 +367,11 @@ int main(int argc, char **argv) {
 			break;
 		}
 
+		reset = false;
+		if (shutdown) {
+			SYS_ResetSystem(SYS_POWEROFF, 0, 0);
+		}
+
 		if (render) {
 			PrintHeader();
 			#ifdef HW_RVL
@@ -478,7 +492,8 @@ int main(int argc, char **argv) {
 			}
 
 			System::run();
-			SDL::update(System::get_display_output());
+			SDL::buffer = System::get_display_output();
+			LWP_ResumeThread(SDL::thread);
 
 			switch (controller)
 			{

@@ -4,13 +4,12 @@
 #include "common/bswp.h"
 #include "core/sh2/peripherals/sh2_dmac.h"
 #include "core/sh2/peripherals/sh2_intc.h"
-// #include "core/sh2/peripherals/sh2_pfc.h"
+#include "core/sh2/peripherals/sh2_pfc.h"
 #include "core/sh2/peripherals/sh2_serial.h"
 #include "core/sh2/peripherals/sh2_timers.h"
 #include "core/sh2/sh2.h"
 #include "core/sh2/sh2_bus.h"
 #include "core/sh2/sh2_interpreter.h"
-#include "core/sh2/sh2_dynarec.h"
 #include "core/sh2/sh2_local.h"
 #include "core/memory.h"
 #include "core/timing.h"
@@ -95,16 +94,13 @@ void initialize()
 	else
 	{
 		//The initial values of PC and SP are read from the vector table
-		/*int boot_type = 0;
+		int boot_type = 0;
 		uint8_t* boot_vectors = sh2.pagetable[0];
 		uint32_t reset_pc, reset_sp;
 		memcpy(&reset_pc, boot_vectors + boot_type*8 + 0, 4);
 		memcpy(&reset_sp, boot_vectors + boot_type*8 + 4, 4);
 		set_pc(Common::bswp32(reset_pc));
-		sh2.gpr[15] = Common::bswp32(reset_sp);*/
-
-		set_pc(0x00000400);
-		sh2.gpr[15] = 0;
+		sh2.gpr[15] = Common::bswp32(reset_sp);
 	}
 
 	//Next, VBR is cleared to zero and interrupt mask bits in SR are set to 1111
@@ -122,16 +118,13 @@ void initialize()
 	//Set up on-chip peripheral modules after CPU is done
 	OCPM::DMAC::initialize();
 	OCPM::INTC::initialize();
-	// OCPM::PFC::initialize();
+	OCPM::PFC::initialize();
 	OCPM::Serial::initialize();
 	OCPM::Timer::initialize();
-
-	// SH2::Dynarec::initialize();
 }
 
 void shutdown()
 {
-	// SH2::Dynarec::shutdown();
 	sh2.hooks.clear();
 }
 
@@ -172,7 +165,7 @@ void run()
 
 			//Find and run the hook function at this address
 			//TODO: split into smaller paged maps for performance
-			if (sh2.hooks.find(execute_src_addr) != sh2.hooks.end())
+			/*if (sh2.hooks.find(execute_src_addr) != sh2.hooks.end())
 			{
 				SH2::HookFunc hook = sh2.hooks.at(execute_src_addr);
 				
@@ -181,14 +174,13 @@ void run()
 				{
 					execute_valid = false;
 				}
-			}
+			}*/
 
 			//Execute whatever just came off the pipeline
 			bool was_delay_slot = sh2.in_delay_slot;
 			bool was_nointerrupt_slot = sh2.in_nointerrupt_slot;
 			if (execute_valid)
 			{
-				// SH2::Dynarec::run(execute_instruction, execute_src_addr);
 				SH2::Interpreter::run(execute_instruction, execute_src_addr);
 			}
 			//This should probably be done more directly in the interpreter

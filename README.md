@@ -9,8 +9,7 @@ Supports Wii Remote, Classic Controller, Wii U GamePad and GameCube controller. 
 Latest (debug) build is compiled with each commit and can be downloaded from [Github Actions](../../actions/). The latest stable build can be downloaded from [Releases](../../releases/).
 
 ### To-Do
-- Code translation (dynarec), use [Seta GX](https://github.com/fadedled/seta-gx) as a reference?
-- Fix cropping issue when changing between 240/224-line modes?
+- Code translation (dynarec), use [Seta GX](https://github.com/fadedled/seta-gx) or 32X as a reference?
 
 Collaboration on this port would be welcome.
 

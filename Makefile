@@ -37,16 +37,15 @@ INCLUDES	:=	include \
 # options for code generation
 #---------------------------------------------------------------------------------
 
-CFLAGS	=  `$(PREFIX)pkg-config --cflags sdl2` -g -Ofast -mrvl -Wall $(MACHDEP) $(INCLUDE) \
-			-DWII_BIN2O -DHW_RVL -DUSE_WIIDRC
-CXXFLAGS	=	$(CFLAGS) -fno-exceptions -fno-rtti
+CFLAGS	=  `$(PREFIX)pkg-config --cflags sdl2` -g -O3 -mrvl -mcpu=750 -Wall $(MACHDEP) $(INCLUDE) -DHW_RVL -DUSE_WIIDRC
+CXXFLAGS	=	$(CFLAGS)
  
 LDFLAGS	=	-g $(MACHDEP) -Wl,-Map,$(notdir $@).map
 
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=	`$(PREFIX)pkg-config --libs sdl2` -lfat -lwiiuse -lbte -lwiikeyboard -logc -lm -lopus
+LIBS	:=	`$(PREFIX)pkg-config --libs sdl2` -lfat -lwiiuse -lbte -logc -lm -lopus
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
