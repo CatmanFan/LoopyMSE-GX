@@ -83,7 +83,7 @@ static bool sdl_audio_initialize()
 	// Initialize SDL audio subsystem if available
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
 	{
-		//printf("[Sound] SDL audio unavailable: %s", SDL_GetError());
+		printf("[Sound] SDL audio unavailable: %s\n", SDL_GetError());
 		return false;
 	}
 
@@ -102,7 +102,7 @@ static bool sdl_audio_initialize()
 	audio_device = SDL_OpenAudioDevice(NULL, 0, &format_desired, &audio_device_spec, 0);
 	if (!audio_device)
 	{
-		//printf("[Sound] No audio device available");
+		printf("[Sound] No audio device available\n");
 		return false;
 	}
 
@@ -113,7 +113,7 @@ static bool sdl_audio_initialize()
 
 	// Finally enable output
 	SDL_PauseAudioDevice(audio_device, 0);
-	//printf("[Sound] Using audio device %s", SDL_GetAudioDeviceName(audio_device, 0));
+	printf("[Sound] Using audio device %s\n", SDL_GetAudioDeviceName(audio_device, 0));
 	return true;
 }
 
@@ -140,7 +140,7 @@ void initialize(std::vector<uint8_t>& sound_rom)
 
 		if (TIMEREF_ENABLE)
 		{
-			//printf("[Sound] Schedule timeref %d Hz", TIMEREF_FREQUENCY);
+			printf("[Sound] Schedule timeref %d Hz\n", TIMEREF_FREQUENCY);
 			timeref_func = Timing::register_func("Sound::timeref", timeref);
 			timeref(0, 0);
 		}
@@ -198,7 +198,7 @@ void ctrl_write32(uint32_t addr, uint32_t value)
 
 void midi_byte_in(uint8_t value)
 {
-	////printf("[Sound] MIDI byte %02X", value);
+	printf("[Sound] MIDI byte %02X\n", value);
 	//fflush(stdout);
 	if (sound_engine)
 	{
@@ -209,7 +209,7 @@ void midi_byte_in(uint8_t value)
 void set_mute(bool mute_in)
 {
 	mute = mute_in;
-	//printf("[Sound] %s output", mute_in ? "Muted" : "Unmuted");
+	printf("[Sound] %s output\n", mute_in ? "Muted" : "Unmuted");
 }
 
 static void timeref(uint64_t param, int cycles_late)
@@ -271,14 +271,14 @@ void wav_queue(std::string path, float volume)
 	Uint32 len;
 	if (SDL_LoadWAV_RW(SDL_RWFromFile(path.c_str(), "rb"), 1, &spec, &raw, &len) == NULL)
 	{
-		//printf("[Sound] WAV Failed to load at %s: %s", path.c_str(), SDL_GetError());
+		printf("[Sound] WAV Failed to load at %s: %s\n", path.c_str(), SDL_GetError());
 		return;
 	}
-	//printf("[Sound] WAV playing %s", path.c_str());
+	printf("[Sound] WAV playing %s\n", path.c_str());
 
 	if (!wav_stream)
 	{
-		//printf("[Sound] WAV stream created");
+		printf("[Sound] WAV stream created\n");
 		wav_spec = spec;
 		wav_stream = SDL_NewAudioStream(
 			spec.format, spec.channels, spec.freq, audio_device_spec.format, audio_device_spec.channels,

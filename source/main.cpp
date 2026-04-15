@@ -47,9 +47,18 @@ namespace SDL
 
 	static Screen screen;
 
-	bool initialize()
+	bool initialize(bool no_video = false)
 	{
-		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
+		if (no_video)
+		{
+			if (SDL_Init(SDL_INIT_AUDIO) < 0)
+			{
+				printf("SDL2 error: %s\n", SDL_GetError());
+				return false;
+			}
+			return true;
+		}
+		else if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
 		{
 			printf("SDL2 error: %s\n", SDL_GetError());
 			return false;
@@ -425,8 +434,8 @@ int main(int argc, char **argv) {
 		Sound::set_mute(false);
 
 		//All subprojects have been initialized, so it is safe to reference them now
-		// if (!SDL::initialize())
-			// fatal("failed to init SDL");
+		if (!SDL::initialize(true))
+			fatal("failed to init SDL");
 
 	#ifdef HW_RVL
 		#ifdef USE_WIIDRC

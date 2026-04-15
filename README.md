@@ -9,7 +9,7 @@ Supports Wii Remote, Classic Controller, Wii U GamePad and GameCube controller. 
 Latest (debug) build is compiled with each commit and can be downloaded from [Github Actions](../../actions/). The latest stable build can be downloaded from [Releases](../../releases/).
 
 ### To-Do
-- Fix CPU cycle/vsync speed for compatibility with Wii
+- Fix Wii VSync rate for emulator/SDL?
 
 Collaboration on this port would be welcome.
 
