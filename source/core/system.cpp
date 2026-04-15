@@ -76,6 +76,8 @@ void run()
 			slice_length = std::min(slice_length, Timing::calc_slice_length(i));
 		}
 
+		printf("[System] Running cycle of length %lld\n", slice_length);
+
 		//Run all cores, processing any scheduler events that happen for them
 		for (int i = 0; i < Timing::NUM_TIMERS; i++)
 		{
@@ -83,6 +85,7 @@ void run()
 		}
 	}
 
+	printf("[System] Reached frame end\n");
 	Cart::sram_commit_check();
 }
 
