@@ -161,25 +161,25 @@ void shutdown()
 
 uint8_t ctrl_read8(uint32_t addr)
 {
-	assert(0);
+	//assert(0);
 	return 0;
 }
 
 uint16_t ctrl_read16(uint32_t addr)
 {
-	assert(0);
+	//assert(0);
 	return 0;
 }
 
 uint32_t ctrl_read32(uint32_t addr)
 {
-	assert(0);
+	//assert(0);
 	return 0;
 }
 
 void ctrl_write8(uint32_t addr, uint8_t value)
 {
-	assert(0);
+	//assert(0);
 }
 
 void ctrl_write16(uint32_t addr, uint16_t value)
@@ -198,7 +198,7 @@ void ctrl_write32(uint32_t addr, uint32_t value)
 
 void midi_byte_in(uint8_t value)
 {
-	//printf("[Sound] MIDI byte %02X\n", value);
+	printf("[Sound] MIDI byte %02X\n", value);
 	//fflush(stdout);
 	if (sound_engine)
 	{

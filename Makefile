@@ -17,21 +17,17 @@ include $(DEVKITPPC)/wii_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	LoopyMSE
 BUILD		:=	build
-SOURCES		:=	source \
-				source/common \
-				source/core source/core/sh2 source/core/sh2/peripherals \
-				source/expansion source/expansion/msm665x \
-				source/input \
-				source/sound \
-				source/video
+SOURCES		:=	src \
+				src/wiidrc \
+				src/common \
+				src/core src/core/sh2 src/core/sh2/peripherals \
+				src/expansion src/expansion/msm665x \
+				src/input \
+				src/sound \
+				src/video \
+				
 DATA		:=
-INCLUDES	:=	include \
-				include/common \
-				include/core include/core/sh2 include/core/sh2/peripherals \
-				include/expansion include/expansion/msm665x \
-				include/input \
-				include/sound \
-				include/video
+INCLUDES	:=	$(SOURCES)
 
 #---------------------------------------------------------------------------------
 # options for code generation

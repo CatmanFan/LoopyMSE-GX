@@ -678,7 +678,8 @@ static void macw(uint16_t instr)
 	int32_t value2 = (int32_t)(int16_t)Bus::read16(sh2.gpr[reg2]);
 
 	bool saturate = GET_S();
-	assert(!saturate);
+	if (saturate)
+		return;
 
 	//TODO: is this correct?
 	int32_t tmp = value1 * value2;

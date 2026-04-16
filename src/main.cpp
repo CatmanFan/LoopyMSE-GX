@@ -47,9 +47,9 @@ namespace SDL
 
 	static Screen screen;
 
-	bool initialize(bool no_video = false)
+	bool initialize(bool use_video = true)
 	{
-		if (no_video)
+		if (!use_video)
 		{
 			if (SDL_Init(SDL_INIT_AUDIO) < 0)
 			{
@@ -429,12 +429,12 @@ int main(int argc, char **argv) {
 		config.cart.sram.resize(sram_size, 0xFF);
 
 		//Initialize the emulator and all of its subprojects
-		if (autoboot_rom == 0) { printf("Starting emulator\n"); }
+		if (autoboot_rom == 0) { printf("Starting emulator.\nIf video output is disabled, debug information will be displayed here.\n\n"); }
 		System::initialize(config);
 		Sound::set_mute(false);
 
 		//All subprojects have been initialized, so it is safe to reference them now
-		if (!SDL::initialize())
+		if (!SDL::initialize(false))
 			fatal("failed to init SDL");
 
 	#ifdef HW_RVL
@@ -492,8 +492,8 @@ int main(int argc, char **argv) {
 			}
 
 			System::run();
-			// VIDEO_WaitVSync();
-			SDL::update(System::get_display_output());
+			VIDEO_WaitVSync();
+			// SDL::update(System::get_display_output());
 
 			switch (controller)
 			{

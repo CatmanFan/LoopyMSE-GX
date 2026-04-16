@@ -103,14 +103,15 @@ static void process_events()
 
 static void set_cur_timer(int id, int32_t slice)
 {
-	assert(id >= 0);
-	Timer* timer = get_timer(id);
+	if (id >= 0) {
+		Timer* timer = get_timer(id);
 
-	timer->slice_length = slice;
-	timer->set_cycles_left(slice);
-	timer->in_slice = true;
+		timer->slice_length = slice;
+		timer->set_cycles_left(slice);
+		timer->in_slice = true;
 
-	state.cur_timer = timer;
+		state.cur_timer = timer;
+	}
 }
 
 void initialize()
@@ -128,13 +129,11 @@ void shutdown()
 void register_timer(TimerId id, int32_t* cycle_count, TimerFunc func)
 {
 	//Ensure new timers are registered only during initialization
-	assert(!state.cur_timer);
-	assert(cycle_count);
-	assert(id < NUM_TIMERS);
-
-	state.timers[id].cycles_left = cycle_count;
-	state.timers[id].id = id;
-	state.timers[id].func = func;
+	if (!state.cur_timer && cycle_count && id < NUM_TIMERS) {
+		state.timers[id].cycles_left = cycle_count;
+		state.timers[id].id = id;
+		state.timers[id].func = func;
+	}
 }
 
 FuncHandle register_func(std::string name, EventFunc func)
@@ -150,39 +149,45 @@ FuncHandle register_func(std::string name, EventFunc func)
 
 EventHandle add_event(FuncHandle func, UnitCycle cycles, uint64_t param, int core)
 {
-	assert(func.is_valid());
+	if (func.is_valid()) {
+		Timer* timer = get_timer(core);
 
-	Timer* timer = get_timer(core);
+		RegisteredFunc* reg_func = &state.funcs[func.value];
+		Event ev;
+		ev.func = reg_func->func;
+		ev.param = param;
+		ev.id = (timer->next_event_id << 8) | timer->id;
+		timer->next_event_id++;
 
-	RegisteredFunc* reg_func = &state.funcs[func.value];
-	Event ev;
-	ev.func = reg_func->func;
-	ev.param = param;
-	ev.id = (timer->next_event_id << 8) | timer->id;
-	timer->next_event_id++;
+		int64_t raw_cycles = (int64_t)cycles;
+		ev.exec_time = timer->get_timestamp() + raw_cycles;
 
-	int64_t raw_cycles = (int64_t)cycles;
-	ev.exec_time = timer->get_timestamp() + raw_cycles;
+		int32_t raw_cycles_left = timer->get_cycles_left();
+		if (timer->in_slice && raw_cycles < raw_cycles_left && timer == state.cur_timer)
+		{
+			//If the event is scheduled during a slice and should occur before the slice ends, adjust the slice length
+			timer->slice_length -= raw_cycles_left - raw_cycles;
+			timer->set_cycles_left(raw_cycles);
+		}
 
-	int32_t raw_cycles_left = timer->get_cycles_left();
-	if (timer->in_slice && raw_cycles < raw_cycles_left && timer == state.cur_timer)
-	{
-		//If the event is scheduled during a slice and should occur before the slice ends, adjust the slice length
-		timer->slice_length -= raw_cycles_left - raw_cycles;
-		timer->set_cycles_left(raw_cycles);
+		timer->events.push_back(ev);
+		std::push_heap(timer->events.begin(), timer->events.end(), std::greater<>());
+
+		EventHandle handle;
+		handle.value = ev.id;
+		return handle;
+	} else {
+		Timer* timer = get_timer(core);
+		EventHandle handle;
+		handle.value = (timer->next_event_id << 8) | timer->id;
+		return handle;
 	}
-
-	timer->events.push_back(ev);
-	std::push_heap(timer->events.begin(), timer->events.end(), std::greater<>());
-
-	EventHandle handle;
-	handle.value = ev.id;
-	return handle;
 }
 
 void cancel_event(EventHandle& ev)
 {
-	assert(ev.is_valid());
+	if (!ev.is_valid())
+		return;
 
 	Timer* timer = get_timer(ev.get_timer_id());
 
@@ -198,7 +203,8 @@ void cancel_event(EventHandle& ev)
 		}
 	}
 
-	assert(event_found);
+	if (!event_found)
+		return;
 
 	//Indicate that the handle is now invalid
 	ev.value = -1;

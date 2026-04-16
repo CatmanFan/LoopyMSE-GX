@@ -141,9 +141,7 @@ void run()
 			sh2.fetch_done = true;
 		}
 
-		bool pipeline_ready = sh2.fetch_done && last_instruction_done;
-		
-		if (pipeline_ready)
+		if (sh2.fetch_done && last_instruction_done)
 		{
 			//Handle any pending exceptions first, this may change the following fetch
 			handle_exception();
@@ -165,7 +163,7 @@ void run()
 
 			//Find and run the hook function at this address
 			//TODO: split into smaller paged maps for performance
-			/*if (sh2.hooks.find(execute_src_addr) != sh2.hooks.end())
+			if (sh2.hooks.find(execute_src_addr) != sh2.hooks.end())
 			{
 				SH2::HookFunc hook = sh2.hooks.at(execute_src_addr);
 				
@@ -174,7 +172,7 @@ void run()
 				{
 					execute_valid = false;
 				}
-			}*/
+			}
 
 			//Execute whatever just came off the pipeline
 			bool was_delay_slot = sh2.in_delay_slot;
@@ -183,6 +181,7 @@ void run()
 			{
 				SH2::Interpreter::run(execute_instruction, execute_src_addr);
 			}
+
 			//This should probably be done more directly in the interpreter
 			if (was_delay_slot)
 			{
@@ -209,19 +208,19 @@ void assert_irq(int vector_id, int prio)
 
 void raise_exception(int vector_id)
 {
-	assert(vector_id < 0x100);
+	if (vector_id < 0x100) {
+		//Push SR and PC onto the stack
+		sh2.gpr[15] -= 4;
+		Bus::write32(sh2.gpr[15], sh2.sr);
+		sh2.gpr[15] -= 4;
+		Bus::write32(sh2.gpr[15], sh2.pc - 2);
 
-	//Push SR and PC onto the stack
-	sh2.gpr[15] -= 4;
-	Bus::write32(sh2.gpr[15], sh2.sr);
-	sh2.gpr[15] -= 4;
-	Bus::write32(sh2.gpr[15], sh2.pc - 2);
+		uint32_t vector_addr = sh2.vbr + (vector_id * 4);
+		uint32_t new_pc = Bus::read32(vector_addr);
 
-	uint32_t vector_addr = sh2.vbr + (vector_id * 4);
-	uint32_t new_pc = Bus::read32(vector_addr);
-
-	set_pc(new_pc);
-	sh2.pipeline_valid = false;
+		set_pc(new_pc);
+		sh2.pipeline_valid = false;
+	}
 }
 
 void set_pc(uint32_t new_pc)

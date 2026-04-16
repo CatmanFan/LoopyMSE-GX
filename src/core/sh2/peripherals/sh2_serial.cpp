@@ -65,8 +65,8 @@ struct Port
 
 	void calc_cycles_per_bit()
 	{
-		assert(!mode.sync_mode);
-		cycles_per_bit = (32 << (mode.clock_factor * 2)) * (bit_factor + 1);
+		if (!mode.sync_mode)
+			cycles_per_bit = (32 << (mode.clock_factor * 2)) * (bit_factor + 1);
 	}
 
 	void tx_start(uint8_t value)
@@ -104,37 +104,38 @@ static void check_tx_dreqs()
 
 static void tx_event(uint64_t param, int cycles_late)
 {
-	assert(!cycles_late);
-	Port* port = (Port*)param;
+	if (!cycles_late) {
+		Port* port = (Port*)param;
 
-	bool bit = port->tx_shift_reg & 0x1;
-	port->tx_shift_reg >>= 1;
-	port->tx_prepared_data >>= 1;
-	port->tx_prepared_data |= bit << 7;
-	port->tx_bits_left--;
+		bool bit = port->tx_shift_reg & 0x1;
+		port->tx_shift_reg >>= 1;
+		port->tx_prepared_data >>= 1;
+		port->tx_prepared_data |= bit << 7;
+		port->tx_bits_left--;
 
-	if (!port->tx_bits_left)
-	{
-		//printf("[Serial] port%d tx %02X\n", port->id, port->tx_prepared_data);
-
-		if (port->tx_callback != nullptr) {
-			port->tx_callback(port->tx_prepared_data);
-		}
-
-		if (!port->status.tx_empty)
+		if (!port->tx_bits_left)
 		{
-			port->tx_start(port->tx_buffer);
-			check_tx_dreqs();
+			//printf("[Serial] port%d tx %02X\n", port->id, port->tx_prepared_data);
+
+			if (port->tx_callback != nullptr) {
+				port->tx_callback(port->tx_prepared_data);
+			}
+
+			if (!port->status.tx_empty)
+			{
+				port->tx_start(port->tx_buffer);
+				check_tx_dreqs();
+			}
+			else
+			{
+				//TODO: can this trigger an interrupt?
+				//printf("[Serial] port%d finished tx\n", port->id);
+			}
 		}
 		else
 		{
-			//TODO: can this trigger an interrupt?
-			//printf("[Serial] port%d finished tx\n", port->id);
+			port->sched_tx_ev();
 		}
-	}
-	else
-	{
-		port->sched_tx_ev();
 	}
 }
 
@@ -194,7 +195,7 @@ void write8(uint32_t addr, uint8_t value)
 		port->mode.parity_enable = (value >> 5) & 0x1;
 		port->mode.seven_bit_mode = (value >> 6) & 0x1;
 		port->mode.sync_mode = (value >> 7) & 0x1;
-		assert(!(value & ~0x3));
+		//assert(!(value & ~0x3));
 		break;
 	case 0x01:
 		//printf("[Serial] write port%d bitrate factor: %02X\n", port->id, value);
@@ -267,8 +268,8 @@ void write8(uint32_t addr, uint8_t value)
 
 void set_tx_callback(int port, std::function<void(uint8_t)> callback)
 {
-	assert(port >= 0 && port < PORT_COUNT);
-	state.ports[port].tx_callback = callback;
+	if (port >= 0 && port < PORT_COUNT)
+		state.ports[port].tx_callback = callback;
 }
 
 }

@@ -1,5 +1,5 @@
 ## LoopyMSE-GX (LoopyMSE for Wii)
-An experimental port of [LoopyMSE](https://github.com/LoopyMSE/LoopyMSE) (Loopy My Seal Emulator), a Casio Loopy emulator, to the Wii/GameCube. Note that performance is still slow, and the majority of the code remains untested, although it can run both commercial and homebrew games.
+An experimental port of [LoopyMSE](https://github.com/LoopyMSE/LoopyMSE) (Loopy My Seal Emulator), a Casio Loopy emulator, to the Wii/GameCube. Currently runs at 14~15 FPS on Wii (for reasons still unknown).
 
 ### Usage
 Place BIOS (bios.bin) and sound BIOS (soundbios.bin) in the same directory as the app's boot.dol. ROMs must be placed in a "roms" subdirectory (e.g. apps/LoopyMSE-GX/roms) or, to autoboot the ROM by default, as rom.bin alongside boot.dol. The emulator will not run if bios.bin or ROM(s) cannot be found!
@@ -9,7 +9,7 @@ Supports Wii Remote, Classic Controller, Wii U GamePad and GameCube controller. 
 Latest (debug) build is compiled with each commit and can be downloaded from [Github Actions](../../actions/). The latest stable build can be downloaded from [Releases](../../releases/).
 
 ### To-Do
-- Fix Wii VSync rate for emulator/SDL?
+- Fix SH2 timer(s) for emulator?
 
 Collaboration on this port would be welcome.
 

@@ -44,7 +44,8 @@ struct Timer
 			return;
 		}
 
-		assert(!(ctrl.clock & ~0x3));
+		if (ctrl.clock & ~0x3)
+			return;
 
 		int64_t time_elapsed = Timing::get_timestamp(Timing::CPU_TIMER) - time_when_started;
 		counter = counter_when_started + (time_elapsed >> ctrl.clock);
@@ -67,9 +68,12 @@ struct Timer
 
 	void start()
 	{
-		assert(!(ctrl.clock & ~0x3));
-		assert(!ctrl.edge_mode);
-		assert(ctrl.clear_mode != 3);
+		if (ctrl.clock & ~0x3)
+			return;
+		if (ctrl.edge_mode)
+			return;
+		if (ctrl.clear_mode == 3)
+			return;
 
 		//Calculate the target which will take the smallest amount of time to reach
 		constexpr static uint32_t OVERFLOW_TARGET = 0x10000;
@@ -138,48 +142,49 @@ static void update_timer_target(Timer* timer)
 
 static void intr_event(uint64_t param, int cycles_late)
 {
-	assert(!cycles_late);
-	Timer* timer = (Timer*)param;
+	if (!cycles_late) {
+		Timer* timer = (Timer*)param;
 
-	timer->update_counter();
+		timer->update_counter();
 
-	bool clear_counter = false;
+		bool clear_counter = false;
 
-	//Compare 1
-	if (timer->counter == timer->gen_reg[0])
-	{
-		timer->intr_flag |= 0x1;
-		if (timer->ctrl.clear_mode == 0x1)
+		//Compare 1
+		if (timer->counter == timer->gen_reg[0])
 		{
-			clear_counter = true;
+			timer->intr_flag |= 0x1;
+			if (timer->ctrl.clear_mode == 0x1)
+			{
+				clear_counter = true;
+			}
 		}
-	}
 
-	//Compare 2
-	if (timer->counter == timer->gen_reg[1])
-	{
-		timer->intr_flag |= 0x2;
-		if (timer->ctrl.clear_mode == 0x2)
+		//Compare 2
+		if (timer->counter == timer->gen_reg[1])
 		{
-			clear_counter = true;
+			timer->intr_flag |= 0x2;
+			if (timer->ctrl.clear_mode == 0x2)
+			{
+				clear_counter = true;
+			}
 		}
+
+		//Overflow
+		if (timer->counter == 0)
+		{
+			timer->intr_flag |= 0x4;
+		}
+
+		if (clear_counter)
+		{
+			timer->counter = 0;
+		}
+
+		update_timer_irq(timer);
+
+		//Restart the timer
+		timer->start();
 	}
-
-	//Overflow
-	if (timer->counter == 0)
-	{
-		timer->intr_flag |= 0x4;
-	}
-
-	if (clear_counter)
-	{
-		timer->counter = 0;
-	}
-
-	update_timer_irq(timer);
-
-	//Restart the timer
-	timer->start();
 }
 
 static TimerDev get_dev_from_addr(uint32_t addr)
@@ -335,12 +340,12 @@ void write8(uint32_t addr, uint8_t value)
 	case 0x01:
 		//printf("[Timer] write sync ctrl: %02X\n", value);
 		state.sync_ctrl = value & 0x1F;
-		assert(!state.sync_ctrl);
+		//assert(!state.sync_ctrl);
 		break;
 	case 0x02:
 		//printf("[Timer] write mode: %02X\n", value);
 		state.mode = value & 0x7F;
-		assert(!state.mode);
+		//assert(!state.mode);
 		break;
 	default:
 		break;
