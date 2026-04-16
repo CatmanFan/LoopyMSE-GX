@@ -1,5 +1,6 @@
 #include <limits>
 #include <cassert>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -7,7 +8,7 @@
 #include "common/bswp.h"
 #include "core/sh2/peripherals/sh2_intc.h"
 #include "core/memory.h"
-#include "core/timing.h"
+#include "core/scheduler.h"
 #include "video/render.h"
 #include "video/vdp_local.h"
 #include "video/video.h"
@@ -15,8 +16,7 @@
 namespace Video
 {
 
-static Timing::FuncHandle vcount_func, hsync_func;
-static Timing::EventHandle vcount_ev, hsync_ev;
+static Scheduler::Event vcount_ev, hsync_ev, vsync_ev;
 
 VDP vdp;
 
@@ -158,6 +158,11 @@ static void vsync_start()
 	//dump_for_serial();
 }
 
+static void vsync_dummy(uint64_t param, int cycles_late)
+{
+	// nop
+}
+
 static void inc_vcount(uint64_t param, int cycles_late)
 {
 	//Leave HSYNC
@@ -183,15 +188,17 @@ static void inc_vcount(uint64_t param, int cycles_late)
 		vdp.vcount = 0;
 	}
 
-	constexpr static int CYCLES_PER_FRAME = Timing::F_CPU / 60;
+	constexpr static int CYCLES_PER_FRAME = Scheduler::F_CPU / 60;
 	constexpr static int CYCLES_PER_LINE = CYCLES_PER_FRAME / LINES_PER_FRAME;
 	constexpr static int CYCLES_UNTIL_HSYNC = (CYCLES_PER_LINE * 256.0f) / 341.25f;
 
-	Timing::UnitCycle scanline_cycles = Timing::convert_cpu(CYCLES_PER_LINE - cycles_late);
-	vcount_ev = Timing::add_event(vcount_func, scanline_cycles, 0, Timing::CPU_TIMER);
+	vcount_ev = (Scheduler::Event) { inc_vcount, CYCLES_PER_LINE - cycles_late, 0, Scheduler::EVENT_VCOUNT };
+	hsync_ev = (Scheduler::Event) { start_hsync, CYCLES_UNTIL_HSYNC - cycles_late, 0, Scheduler::EVENT_HSYNC };
+	vsync_ev = (Scheduler::Event) { vsync_dummy, CYCLES_PER_FRAME, 0, Scheduler::EVENT_VSYNC };
 
-	Timing::UnitCycle hsync_cycles = Timing::convert_cpu(CYCLES_UNTIL_HSYNC - cycles_late);
-	hsync_ev = Timing::add_event(hsync_func, hsync_cycles, 0, Timing::CPU_TIMER);
+	Scheduler::add_event(&vcount_ev);
+	Scheduler::add_event(&hsync_ev);
+	Scheduler::add_event(&vsync_ev);
 }
 
 static void dump_serial_region(std::ofstream& dump, uint8_t* mem, uint32_t addr, uint32_t length)
@@ -237,9 +244,6 @@ void initialize()
 	Memory::map_sh2_pagetable(vdp.bitmap, BITMAP_VRAM_START, BITMAP_VRAM_SIZE);
 	Memory::map_sh2_pagetable(vdp.bitmap, BITMAP_VRAM_START + BITMAP_VRAM_SIZE, BITMAP_VRAM_SIZE);
 	Memory::map_sh2_pagetable(vdp.tile, TILE_VRAM_START, TILE_VRAM_SIZE);
-
-	vcount_func = Timing::register_func("Video::inc_vcount", inc_vcount);
-	hsync_func = Timing::register_func("Video::start_hsync", start_hsync);
 
 	//Kickstart the VCOUNT event
 	inc_vcount(0, 0);

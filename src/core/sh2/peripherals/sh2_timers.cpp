@@ -3,18 +3,18 @@
 #include <tuple>
 #include "core/sh2/peripherals/sh2_intc.h"
 #include "core/sh2/peripherals/sh2_timers.h"
-#include "core/timing.h"
+#include "core/scheduler.h"
 
 namespace SH2::OCPM::Timer
 {
 
 constexpr static int TIMER_COUNT = 5;
 
-static Timing::FuncHandle ev_func;
+static void intr_event(uint64_t param, int cycles_late);
 
 struct Timer
 {
-	Timing::EventHandle ev;
+	Scheduler::Event ev;
 	INTC::IRQ irq;
 	int enabled;
 	int id;
@@ -39,7 +39,7 @@ struct Timer
 
 	void update_counter()
 	{
-		if (!ev.is_valid())
+		if (!Scheduler::contains_event(&ev))
 		{
 			return;
 		}
@@ -47,7 +47,7 @@ struct Timer
 		if (ctrl.clock & ~0x3)
 			return;
 
-		int64_t time_elapsed = Timing::get_timestamp(Timing::CPU_TIMER) - time_when_started;
+		int64_t time_elapsed = Scheduler::get_time() - time_when_started;
 		counter = counter_when_started + (time_elapsed >> ctrl.clock);
 		counter &= 0xFFFF;
 	}
@@ -56,13 +56,13 @@ struct Timer
 	{
 		enabled = new_enable;
 
-		if (!ev.is_valid() && enabled)
+		if (!Scheduler::contains_event(&ev) && enabled)
 		{
 			start();
 		}
-		else if (ev.is_valid() && !enabled)
+		else if (Scheduler::contains_event(&ev) && !enabled)
 		{
-			Timing::cancel_event(ev);
+			Scheduler::remove_event(&ev);
 		}
 	}
 
@@ -86,11 +86,9 @@ struct Timer
 			}
 		}
 
-		uint32_t cycles = (nearest_target - counter) << ctrl.clock;
-		Timing::UnitCycle sched_cycles = Timing::convert_cpu(cycles);
-		ev = Timing::add_event(ev_func, sched_cycles, (uint64_t)this, Timing::CPU_TIMER);
-
-		time_when_started = Timing::get_timestamp(Timing::CPU_TIMER);
+		ev = (Scheduler::Event) { intr_event, (nearest_target - counter) << ctrl.clock, (uint64_t)this, Scheduler::EVENT_SH2_TIMER };
+		Scheduler::add_event(&ev);
+		time_when_started = Scheduler::get_time();
 		counter_when_started = counter;
 	}
 };
@@ -218,7 +216,6 @@ static TimerDev get_dev_from_addr(uint32_t addr)
 void initialize()
 {
 	state = {};
-	ev_func = {};
 
 	for (int i = 0; i < TIMER_COUNT; i++)
 	{
@@ -230,8 +227,6 @@ void initialize()
 	state.timers[2].irq = INTC::IRQ::ITU2;
 	state.timers[3].irq = INTC::IRQ::ITU3;
 	state.timers[4].irq = INTC::IRQ::ITU4;
-
-	ev_func = Timing::register_func("Timer::intr_event", intr_event);
 }
 
 uint8_t read8(uint32_t addr)

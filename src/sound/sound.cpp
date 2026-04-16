@@ -17,7 +17,7 @@ Game support notes:
 
 #include <SDL2/SDL.h>
 #include "common/wordops.h"
-#include "core/timing.h"
+#include "core/scheduler.h"
 #include "sound/loopysound.h"
 #include "sound/sound.h"
 
@@ -31,8 +31,7 @@ Game support notes:
 namespace Sound
 {
 
-static Timing::FuncHandle timeref_func;
-static Timing::EventHandle timeref_ev;
+static Scheduler::Event timeref_ev;
 
 static std::unique_ptr<LoopySound::LoopySound> sound_engine;
 
@@ -141,7 +140,6 @@ void initialize(std::vector<uint8_t>& sound_rom)
 		if (TIMEREF_ENABLE)
 		{
 			//printf("[Sound] Schedule timeref %d Hz\n", TIMEREF_FREQUENCY);
-			timeref_func = Timing::register_func("Sound::timeref", timeref);
 			timeref(0, 0);
 		}
 	}
@@ -214,9 +212,9 @@ void set_mute(bool mute_in)
 
 static void timeref(uint64_t param, int cycles_late)
 {
-	constexpr static int cycles_per_timeref = Timing::F_CPU / TIMEREF_FREQUENCY;
-	Timing::UnitCycle timeref_cycles = Timing::convert_cpu(cycles_per_timeref - cycles_late);
-	timeref_ev = Timing::add_event(timeref_func, timeref_cycles, 0, Timing::CPU_TIMER);
+	constexpr static int cycles_per_timeref = Scheduler::F_CPU / TIMEREF_FREQUENCY;
+	timeref_ev = (Scheduler::Event) { timeref, cycles_per_timeref, 0, Scheduler::EVENT_SOUND };
+	Scheduler::add_event(&timeref_ev);
 
 	constexpr static float timeref_period = 1.f / TIMEREF_FREQUENCY;
 	sound_engine->time_reference(timeref_period);

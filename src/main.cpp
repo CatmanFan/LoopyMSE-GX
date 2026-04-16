@@ -107,6 +107,11 @@ namespace SDL
 
 	void update(uint16_t* display_output)
 	{
+		if (screen.renderer == nullptr) {
+			VIDEO_WaitVSync();
+			return;
+		}
+
 		// Clear screen
 		SDL_SetRenderDrawColor(screen.renderer, 15, 15, 15, 255);
 		SDL_RenderClear(screen.renderer);
@@ -434,7 +439,7 @@ int main(int argc, char **argv) {
 		Sound::set_mute(false);
 
 		//All subprojects have been initialized, so it is safe to reference them now
-		if (!SDL::initialize())
+		if (!SDL::initialize(false))
 			fatal("failed to init SDL");
 
 	#ifdef HW_RVL
@@ -492,7 +497,6 @@ int main(int argc, char **argv) {
 			}
 
 			System::run();
-			// VIDEO_WaitVSync();
 			SDL::update(System::get_display_output());
 
 			switch (controller)
