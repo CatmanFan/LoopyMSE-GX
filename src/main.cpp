@@ -439,7 +439,7 @@ int main(int argc, char **argv) {
 		Sound::set_mute(false);
 
 		//All subprojects have been initialized, so it is safe to reference them now
-		if (!SDL::initialize(false))
+		if (!SDL::initialize())
 			fatal("failed to init SDL");
 
 	#ifdef HW_RVL

@@ -12,7 +12,7 @@
 #include "core/sh2/sh2_interpreter.h"
 #include "core/sh2/sh2_local.h"
 #include "core/memory.h"
-#include "core/scheduler.h"
+#include "core/timing.h"
 
 namespace SH2
 {
@@ -64,9 +64,9 @@ static bool handle_exception()
 		if (can_execute_exception(vector, prio))
 		{
 			raise_exception(vector);
-		
+
 			int new_imask = std::clamp(prio, 0, 15);
-		
+
 			//Interrupt mask should only be modified after the above function so that the original value can be pushed onto the stack
 			sh2.sr &= ~0xF0;
 			sh2.sr |= new_imask << 4;
@@ -113,6 +113,8 @@ void initialize()
 	sh2.in_nointerrupt_slot = false;
 	sh2.fetch_cycles = 1;
 
+	Timing::register_timer(Timing::CPU_TIMER, &sh2.cycles_left, run);
+
 	//Set up on-chip peripheral modules after CPU is done
 	OCPM::DMAC::initialize();
 	OCPM::INTC::initialize();
@@ -126,9 +128,9 @@ void shutdown()
 	sh2.hooks.clear();
 }
 
-void run(int64_t cycles)
+void run()
 {
-	while (cycles > 0)
+	while (sh2.cycles_left)
 	{
 		bool last_instruction_done = true; //TODO: wait on longer instructions like multiply
 
@@ -144,14 +146,18 @@ void run(int64_t cycles)
 			//Handle any pending exceptions first, this may change the following fetch
 			handle_exception();
 
-			//Start the next fetch with the current PC and advance the pipeline
+			//Start the next fetch with the current PC
+			uint32_t fetch_src_addr = sh2.pc;
+			uint16_t fetch_instruction = Bus::read16(fetch_src_addr);
+			sh2.fetch_cycles = Bus::read_cycles(fetch_src_addr);
+			sh2.fetch_done = false;
+
+			//Advance the pipeline
 			uint32_t execute_src_addr = sh2.pipeline_src_addr;
 			uint16_t execute_instruction = sh2.pipeline_instruction;
 			bool execute_valid = sh2.pipeline_valid;
-			sh2.fetch_cycles = Bus::read_cycles(sh2.pc);
-			sh2.fetch_done = false;
-			sh2.pipeline_src_addr = sh2.pc;
-			sh2.pipeline_instruction = Bus::read16(sh2.pc);
+			sh2.pipeline_src_addr = fetch_src_addr;
+			sh2.pipeline_instruction = fetch_instruction;
 			sh2.pipeline_valid = true;
 			sh2.pc += 2;
 
@@ -160,7 +166,7 @@ void run(int64_t cycles)
 			if (sh2.hooks.find(execute_src_addr) != sh2.hooks.end())
 			{
 				SH2::HookFunc hook = sh2.hooks.at(execute_src_addr);
-				
+
 				//If hook returns true, the actual instruction is skipped
 				if (hook(execute_src_addr))
 				{
@@ -186,7 +192,7 @@ void run(int64_t cycles)
 				sh2.in_nointerrupt_slot = false;
 			}
 		}
-		cycles -= 1;
+		sh2.cycles_left -= 1;
 	}
 }
 

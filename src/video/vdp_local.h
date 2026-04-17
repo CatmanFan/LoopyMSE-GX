@@ -112,7 +112,7 @@ struct VDP
 	//Display registers - 0x0C05Bxxx
 
 	uint16_t dispmode;
-	
+
 	struct LayerCtrl
 	{
 		int bg_enable[2];

@@ -11,9 +11,7 @@
 #include "core/memory.h"
 #include "core/sh2/peripherals/sh2_serial.h"
 #include "core/sh2/sh2.h"
-#include "core/scheduler.h"
-
-using namespace Scheduler;
+#include "core/timing.h"
 
 namespace System
 {
@@ -24,7 +22,7 @@ void initialize(Config::SystemInfo& config)
 	Memory::initialize(config.bios_rom);
 
 	//Ensure that timing initializes before any CPUs
-	Scheduler::initialize();
+	Timing::initialize();
 
 	//Initialize CPUs
 	SH2::initialize();
@@ -58,7 +56,7 @@ void shutdown(Config::SystemInfo& config)
 
 	SH2::shutdown();
 
-	Scheduler::shutdown();
+	Timing::shutdown();
 	Memory::shutdown();
 }
 
@@ -67,17 +65,24 @@ void run()
 	//Run an entire frame of emulation, stopping when the VDP reaches VSYNC
 	Video::start_frame();
 
-	while (!Video::check_frame_end()) {
-		// Pop the next event from the scheduler.
-		Scheduler::Event* ev = Scheduler::pop_next_event();
-		// Run the CPU until the next event. The CPU can run freely!
-		// printf("[Scheduler] running for %lld cycles for event type %d\n", ev->cyclesUntilReady, (int)ev->type);
-		SH2::run(ev->cyclesUntilReady);
-		ev->func(ev->param, 0);
-		Scheduler::remove_event(ev);
+	while (!Video::check_frame_end())
+	{
+		//TODO: if multiple cores are added, ensure that they are relatively synced
+
+		//Calculate the smallest timeslice between all cores
+		int64_t slice_length = (std::numeric_limits<int64_t>::max)();
+		for (int i = 0; i < Timing::NUM_TIMERS; i++)
+		{
+			slice_length = std::min(slice_length, Timing::calc_slice_length(i));
+		}
+
+		//Run all cores, processing any scheduler events that happen for them
+		for (int i = 0; i < Timing::NUM_TIMERS; i++)
+		{
+			Timing::process_slice(i, slice_length);
+		}
 	}
 
-	printf("[Scheduler] hit VSYNC\n");
 	Cart::sram_commit_check();
 }
 

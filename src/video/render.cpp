@@ -209,7 +209,7 @@ static void draw_bg(int index, int screen_y)
 			int pal = (palsel >> (pal_descriptor * 4)) & 0xF;
 			output |= pal << 4;
 		}
-		
+
 		write_pal_color(vdp.bg_output[index], screen_x, screen_y, output);
 		write_screen(screen_index, screen_x, output);
 	}

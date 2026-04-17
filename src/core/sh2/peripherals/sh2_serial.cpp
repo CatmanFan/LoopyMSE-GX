@@ -5,18 +5,18 @@
 #include "sound/sound.h"
 #include "core/sh2/peripherals/sh2_dmac.h"
 #include "core/sh2/peripherals/sh2_serial.h"
-#include "core/scheduler.h"
+#include "core/timing.h"
 
 namespace SH2::OCPM::Serial
 {
 
 constexpr static int PORT_COUNT = 2;
 
-static void tx_event(uint64_t param, int cycles_late);
+static Timing::FuncHandle tx_ev_func;
 
 struct Port
 {
-	Scheduler::Event tx_ev;
+	Timing::EventHandle tx_ev;
 	DMAC::DREQ rx_dreq_id, tx_dreq_id;
 
 	int id;
@@ -79,8 +79,8 @@ struct Port
 
 	void sched_tx_ev()
 	{
-		tx_ev = (Scheduler::Event) { tx_event, cycles_per_bit, (uint64_t)this, Scheduler::EVENT_SH2_SERIAL };
-		Scheduler::add_event(&tx_ev);
+		Timing::UnitCycle sched_cycles = Timing::convert_cpu(cycles_per_bit);
+		tx_ev = Timing::add_event(tx_ev_func, sched_cycles, (uint64_t)this, Timing::CPU_TIMER);
 	}
 };
 
@@ -143,6 +143,8 @@ void initialize()
 {
 	state = {};
 
+	tx_ev_func = Timing::register_func("Serial::tx_event", tx_event);
+
 	for (int i = 0; i < PORT_COUNT; i++)
 	{
 		state.ports[i].id = i;
@@ -199,7 +201,7 @@ void write8(uint32_t addr, uint8_t value)
 		//printf("[Serial] write port%d bitrate factor: %02X\n", port->id, value);
 		port->bit_factor = value;
 		port->calc_cycles_per_bit();
-		//printf("[Serial] set port%d baudrate: %d bit/s\n", port->id, Scheduler::F_CPU / port->cycles_per_bit);
+		//printf("[Serial] set port%d baudrate: %d bit/s\n", port->id, Timing::F_CPU / port->cycles_per_bit);
 		break;
 	case 0x02:
 		//printf("[Serial] write port%d ctrl: %02X\n", port->id, value);
